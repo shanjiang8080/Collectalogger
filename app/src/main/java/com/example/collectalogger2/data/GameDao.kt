@@ -18,11 +18,21 @@ interface GameDao {
     suspend fun delete(game: Game)
 
     @Query("SELECT * from games WHERE id = :id")
-    fun getGame(id: Long): Flow<Game>
+    fun getGame(id: Long): Game?
+
+    @Query("SELECT * from games WHERE id = :id")
+    fun getGameStream(id: Long): Flow<Game?>
+
 
     @Query("SELECT * from games WHERE igdbId = :igdbId")
-    fun getGameByIGDBId(igdbId: Long): Flow<Game>
+    fun getGameByIGDBId(igdbId: Long): Game?
+
+    @Query("SELECT * from games WHERE igdbId = :igdbId")
+    fun getGameStreamByIGDBId(igdbId: Long): Flow<Game?>
 
     @Query("SELECT * from games ORDER BY sortingName ASC")
-    fun getAllGames(): Flow<List<Game>>
+    fun getAllGames(): List<Game>
+
+    @Query("SELECT * from games ORDER BY sortingName ASC")
+    fun getAllGamesStream(): Flow<List<Game>>
 }

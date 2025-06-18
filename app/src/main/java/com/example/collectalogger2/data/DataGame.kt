@@ -21,15 +21,15 @@ data class Game(
     var sortingName: String = ""
     // The platform the user has the game on (PC, PS5, Switch, etc).
     // Later on, I'll add non-PC sources that will affect this.
-    val platform: Set<String> = setOf()
+    var platform: Set<String> = setOf()
     // The genre, as provided by IGDB.
-    val genre: Set<String> = setOf()
+    var genre: Set<String> = setOf()
     // The game libraries (can be multiple) that it is part of.
-    val source: Set<LibraryEnum> = setOf()
+    var source: Set<String> = setOf()
     // Play status (set manually)
     var status: String = ""
     // The ID that IGDB uses. Of course, set by IGDB.
-    val igdbId: Long = -1
+    var igdbId: Long = -1
     // a URL for IGDB, i guess...
     var imageUrl: String = ""
     var playTime: Long = 0

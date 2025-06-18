@@ -4,12 +4,20 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-
+    kotlin("plugin.serialization") version "2.1.21"
+    id("com.google.devtools.ksp") version "2.1.21-2.0.1"
 }
 
 android {
     namespace = "com.example.collectalogger2"
     compileSdk = 35
+
+    kotlin {
+        jvmToolchain(21)
+        sourceSets.all {
+            kotlin.srcDir("build/generated/ksp/${name}/kotlin")
+        }
+    }
 
     defaultConfig {
         applicationId = "com.example.collectalogger2"
@@ -53,11 +61,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "21"
     }
     buildFeatures {
         compose = true
@@ -83,6 +91,8 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     // JSON serialization library, works with the Kotlin serialization plugin
     implementation(libs.kotlinx.serialization.json)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     // coil for async image loading
     implementation(libs.coil3.coil.compose)
     implementation(libs.coil.network.okhttp)
@@ -90,15 +100,19 @@ dependencies {
     implementation(libs.husnjak.igdb.api.jvm)
     // this is for Ktor/calling various non-igdb APIs
     //K-tor
-    implementation(libs.ktor.client.android.v150)
+    implementation("io.ktor:ktor-client-android:2.3.4")
     implementation(libs.ktor.client.core.v150)
     implementation(libs.ktor.client.serialization.jvm)
     implementation(libs.ktor.client.logging)
 
     // room persisting
-    implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.compiler)
-    implementation(libs.androidx.room.ktx)
+    val roomVersion = "2.7.1" // or latest stable
+
+    implementation("androidx.room:room-runtime:$roomVersion")
+    implementation("androidx.room:room-ktx:$roomVersion")
+    ksp("androidx.room:room-compiler:$roomVersion")
+
+
 
 
     testImplementation(libs.junit)

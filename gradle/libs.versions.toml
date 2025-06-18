@@ -10,6 +10,7 @@ junitVersion = "1.2.1"
 espressoCore = "3.6.1"
 kotlinBom = "1.8.0"
 kotlinxSerializationJson = "1.7.3"
+kotlinxSerializationJsonVersion = "1.6.3"
 ktorClientAndroid = "2.4.0"
 ktorClientCore = "2.4.0"
 ktorClientCoreVersion = "1.5.0"
@@ -18,12 +19,14 @@ ktorVersion = "1.5.0"
 lifecycleRuntimeKtx = "2.8.7"
 activityCompose = "1.10.0"
 composeBom = "2024.04.01"
+navigationComposeVersion = "2.9.0"
 navigationRuntimeKtx = "2.8.7"
 navigationCompose = "2.8.7"
 roomCompiler = "2.7.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-navigation-compose-v290 = { module = "androidx.navigation:navigation-compose", version.ref = "navigationComposeVersion" }
 androidx-room-ktx = { module = "androidx.room:room-ktx" }
 androidx-room-runtime = { module = "androidx.room:room-runtime" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
@@ -47,6 +50,7 @@ androidx-navigation-runtime-ktx = { group = "androidx.navigation", name = "navig
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 kotlin-bom = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlinBom" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
+kotlinx-serialization-json-v163 = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJsonVersion" }
 ktor-client-android = { module = "io.ktor:ktor-client-android", version.ref = "ktorClientAndroid" }
 ktor-client-android-v150 = { module = "io.ktor:ktor-client-android", version.ref = "ktorVersion" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktorClientCore" }

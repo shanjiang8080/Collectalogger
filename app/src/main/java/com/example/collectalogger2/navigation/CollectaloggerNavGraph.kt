@@ -8,9 +8,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.toRoute
 import com.example.collectalogger2.BottomAppBar
+import com.example.collectalogger2.ui.AppViewModelProvider
 import com.example.collectalogger2.ui.wishlist.WishListViewModel
 import com.example.collectalogger2.ui.gallery.GalleryScreen
 import com.example.collectalogger2.ui.gallery.GalleryViewModel
@@ -43,7 +45,10 @@ fun CollectaloggerNavGraph(
 
             composable<Gallery> { backStackEntry ->
                 val gallery: Gallery = backStackEntry.toRoute()
-                val galleryViewModel = GalleryViewModel()
+                val galleryViewModel: GalleryViewModel = viewModel(
+                    factory = AppViewModelProvider.Factory,
+                    viewModelStoreOwner = backStackEntry
+                )
                 GalleryScreen(
                     gallery = gallery,
                     viewModel = galleryViewModel
@@ -51,7 +56,10 @@ fun CollectaloggerNavGraph(
             }
             composable<WishList> { backStackEntry ->
                 val wishList: WishList = backStackEntry.toRoute()
-                val wishListViewModel = WishListViewModel()
+                val wishListViewModel: WishListViewModel = viewModel(
+                    factory = AppViewModelProvider.Factory,
+                    viewModelStoreOwner = backStackEntry
+                )
                 WishListScreen(
                     wishList = wishList,
                     viewModel = wishListViewModel

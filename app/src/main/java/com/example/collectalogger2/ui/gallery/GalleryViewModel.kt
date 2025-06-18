@@ -1,11 +1,19 @@
 package com.example.collectalogger2.ui.gallery
 
+import android.app.Application
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.collectalogger2.AppContainer
+import com.example.collectalogger2.AppDataContainer
+import com.example.collectalogger2.CollectaloggerApplication
 import com.example.collectalogger2.data.Game
+import com.example.collectalogger2.data.GameDatabase
 import com.example.collectalogger2.data.repository.GameLibraryRepository
 import com.example.collectalogger2.util.Filter
 import com.example.collectalogger2.util.Sort
 import com.example.collectalogger2.util.SortBy
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,14 +22,22 @@ import kotlinx.coroutines.flow.update
 data class GalleryUiState(
     val sort: Sort? = Sort(SortBy.RELEASED, false),
     val filter: Filter? = null,
-    val games: List<Game>
+    val games: List<Game> = emptyList()
 )
 
-class GalleryViewModel : ViewModel() {
+class GalleryViewModel(val container: AppContainer) : ViewModel() {
     // TODO eventually, pass in the user data in the GameLibraryRepository
     // like, for example, Steam account ID
-    val fakeRepository = GameLibraryRepository(null, null)
-    private val _uiState = MutableStateFlow(GalleryUiState(games = fakeRepository.getFakeGames()))
+    var repository = container.gameLibraryRepository
+
+    private val _games: List<Game> = emptyList()
+    private val _uiState = MutableStateFlow(GalleryUiState(games = _games))
+    init {
+        viewModelScope.launch(Dispatchers.IO) {
+            //repository.updateGameLibraries()
+            _games.plus(repository.getAllGames())
+        }
+    }
     val uiState: StateFlow<GalleryUiState> = _uiState.asStateFlow()
 
     fun updateFilter(newFilter: Filter) {

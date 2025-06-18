@@ -4,9 +4,12 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import android.content.Context
+import androidx.room.TypeConverters
+import com.example.collectalogger2.util.Converters
 
 // increase the version whenever you change the schema of the database table.
-@Database(entities = [Game::class], version = 1, exportSchema = true)
+@Database(entities = [Game::class], version = 1, exportSchema = false)
+@TypeConverters(Converters::class)
 abstract class GameDatabase : RoomDatabase() {
     abstract fun gameDao(): GameDao
 
@@ -15,12 +18,17 @@ abstract class GameDatabase : RoomDatabase() {
         private var Instance: GameDatabase? = null
 
         fun getDatabase(context: Context): GameDatabase {
-            // if Instance isn't null, return it, otherwise create a new database instance.
-            return (Instance ?: synchronized(this) {
-                Room.databaseBuilder(context, GameDatabase::class.java, "game_database")
+            return Instance ?: synchronized(this) {
+                val instance = Room.databaseBuilder(
+                    context.applicationContext,
+                    GameDatabase::class.java,
+                    "game_database"
+                )
                     .fallbackToDestructiveMigration(false)
-                    .also { Instance = it.build() } // different from template but idk??
-            }) as GameDatabase
+                    .build()
+                Instance = instance
+                instance
+            }
         }
     }
 }

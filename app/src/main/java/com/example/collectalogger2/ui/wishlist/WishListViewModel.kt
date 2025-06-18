@@ -1,5 +1,7 @@
 package com.example.collectalogger2.ui.wishlist
 
+import androidx.lifecycle.ViewModel
+import com.example.collectalogger2.AppContainer
 import com.example.collectalogger2.data.repository.GameWishlistRepository
 import com.example.collectalogger2.data.WishlistGame
 import com.example.collectalogger2.util.Filter
@@ -17,7 +19,9 @@ data class WishlistUiState(
     val games: List<WishlistGame>
 )
 
-class WishListViewModel {
+// Has a container but is currently unused as database stuff isn't set up
+// TODO Fix this at some point
+class WishListViewModel(val container: AppContainer) : ViewModel() {
     val fakeRepository = GameWishlistRepository()
     private val _uiState = MutableStateFlow(WishlistUiState(games = fakeRepository.getFakeWishlistGames()))
     val uiState: StateFlow<WishlistUiState> = _uiState.asStateFlow()
