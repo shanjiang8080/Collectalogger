@@ -24,6 +24,10 @@ class GameLibraryRepository(
 
     fun getGameStream(id: Long): Flow<Game?> = gameDao.getGameStream(id)
 
+    fun getGameById(id: Long): Game? = gameDao.getGame(id)
+
+    fun getGameByIGDBId(IGDBId: Long): Game? = gameDao.getGameByIGDBId(IGDBId)
+
     fun getGameStreamByIGDBId(IGDBId: Long): Flow<Game?> = gameDao.getGameStreamByIGDBId(IGDBId)
 
     suspend fun insertGame(game: Game) = gameDao.insert(game)
@@ -51,9 +55,11 @@ class GameLibraryRepository(
                                 */
                                 val newGame = game.copy(id = existingGame.id)
                                 updateGame(newGame)
+                                Log.i("Game updated!", "{title: ${game.title}, igdbId: ${game.igdbId}, id: ${game.id}}")
                             } else {
                                 // add the new game
                                 insertGame(game)
+                                Log.i("Game added!", "{title: ${game.title}, igdbId: ${game.igdbId}, id: ${game.id}}")
                             }
                         }
                 }
@@ -74,15 +80,4 @@ class GameLibraryRepository(
             }
         }
     }
-
-    // TODO Delete this when the thing starts working
-    fun getFakeGames(): List<Game> {
-        val g1 = Game("Penny's Big Breakaway", 1)
-        g1.imageUrl = "https://images.igdb.com/igdb/image/upload/t_cover_big/co6nmg.webp"
-        val g2 = Game("Sonic Mania", 2)
-        g2.imageUrl = "https://images.igdb.com/igdb/image/upload/t_cover_big/co1obi.webp"
-        val g3 = Game("Rogue Legacy", 3)
-        return listOf(g1, g2, g3)
-    }
-
 }

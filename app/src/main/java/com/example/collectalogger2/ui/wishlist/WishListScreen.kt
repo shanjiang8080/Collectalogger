@@ -17,7 +17,6 @@ import com.example.collectalogger2.navigation.WishList
 
 @Composable
 fun WishListScreen(
-    wishList: WishList,
     viewModel: WishListViewModel
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()

@@ -27,7 +27,10 @@ import com.example.collectalogger2.navigation.Gallery
 import com.example.collectalogger2.navigation.WishList
 
 @Composable
-fun BottomAppBar(navController: NavController?) {
+fun BottomAppBar(
+    onNavigateToWishlist: () -> Unit,
+    onNavigateToGallery: () -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly
@@ -35,9 +38,9 @@ fun BottomAppBar(navController: NavController?) {
     {
         // icons, add more as necessary.
         BottomNavItem("Wishlist", Icons.Rounded.ShoppingCart)
-        { navController?.navigate(route = WishList) }
+        { onNavigateToWishlist }
         BottomNavItem("Gallery", Icons.Rounded.Home)
-        { navController?.navigate(route = Gallery) }
+        { onNavigateToGallery }
     }
 }
 
@@ -76,5 +79,5 @@ fun ShoppingNavItem() {
 )
 @Composable
 fun BarPreview() {
-    BottomAppBar(null)
+    BottomAppBar({}, {})
 }

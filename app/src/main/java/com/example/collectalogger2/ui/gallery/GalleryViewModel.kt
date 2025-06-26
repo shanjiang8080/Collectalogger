@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import android.util.Log
 
 data class GalleryUiState(
     val sort: Sort? = Sort(SortBy.RELEASED, false),
@@ -34,8 +35,9 @@ class GalleryViewModel(val container: AppContainer) : ViewModel() {
     private val _uiState = MutableStateFlow(GalleryUiState(games = _games))
     init {
         viewModelScope.launch(Dispatchers.IO) {
-            //repository.updateGameLibraries()
-            _games.plus(repository.getAllGames())
+            val games = repository.getAllGames()
+            _uiState.value = _uiState.value.copy(games = games)
+            // Log.i("Games list: ", "${repository.getAllGames()}")
         }
     }
     val uiState: StateFlow<GalleryUiState> = _uiState.asStateFlow()
@@ -48,6 +50,14 @@ class GalleryViewModel(val container: AppContainer) : ViewModel() {
     fun updateSort(newSort: Sort) {
         _uiState.update {
             it.copy(sort = newSort)
+        }
+    }
+
+    fun updateGames() {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.updateGameLibraries()
+            val games = repository.getAllGames()
+            _uiState.value = _uiState.value.copy(games = games)
         }
     }
 }

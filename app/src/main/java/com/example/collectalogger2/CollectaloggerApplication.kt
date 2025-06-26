@@ -7,7 +7,8 @@ import android.app.Application
  * Gives access to resources, system services, app-level information.
  */
 class CollectaloggerApplication : Application() {
-    public lateinit var container: AppContainer
+    lateinit var container: AppContainer
+        private set
 
     override fun onCreate() {
         super.onCreate()

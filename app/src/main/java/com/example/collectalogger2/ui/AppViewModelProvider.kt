@@ -6,7 +6,9 @@ import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.collectalogger2.AppContainer
 import com.example.collectalogger2.CollectaloggerApplication
+import com.example.collectalogger2.ui.detail.DetailViewModel
 import com.example.collectalogger2.ui.gallery.GalleryViewModel
 import com.example.collectalogger2.ui.wishlist.WishListViewModel
 
@@ -26,6 +28,7 @@ object AppViewModelProvider {
                 collectaloggerApplication().container
             )
         }
+
     }
 }
 

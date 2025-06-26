@@ -7,6 +7,7 @@ import io.ktor.client.engine.android.Android
 import io.ktor.client.request.get
 import kotlinx.coroutines.flow.Flow
 import com.example.collectalogger2.BuildConfig
+import com.example.collectalogger2.data.GameDao
 import com.example.collectalogger2.util.APIException
 import com.example.collectalogger2.util.APIStatusException
 import com.example.collectalogger2.util.IGDBSource
@@ -26,10 +27,10 @@ import org.json.JSONObject
  * The bare minimum, you must get the steam library working.
  *
  */
-class SteamDataSource(override var userId: String) : RemoteLibraryDataSource() {
-    // Something that you really should do once you get basic functionality working
-    // is to add caching (for already imported games) so you don't make calls to IGDB unnecessarily.
-    override suspend fun getGames(): Flow<Game> = flow {
+class SteamDataSource(override var userId: String, gameDao: GameDao) : RemoteLibraryDataSource(gameDao) {
+    override var libraryName: String = "Steam"
+
+    override suspend fun getGames(forceUpdate: Boolean): Flow<Game> = flow {
         // so what you do, is that you gotta use the API-key
         val client = HttpClient(Android)
         val response: HttpResponse = client.get("https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${BuildConfig.STEAM_API_KEY}&input_json={\"steamid\":${userId}}")
@@ -51,11 +52,19 @@ class SteamDataSource(override var userId: String) : RemoteLibraryDataSource() {
         // this has many games
         for (i in 0 until games.length()) {
             val apiGame = games.getJSONObject(i)
+
+            var steamAppID: Long = (apiGame.get("appid") as Integer).toLong()
+            // Quick check: If the Steam version of the game exists in the database already,
+            // skip.
+            if (!forceUpdate && gameDao.getGameBySteamId(steamAppID) != null) continue
+
             // Make a new Game object to store the information
             val game = Game()
             // for each game, get the appID, playtime. "Last Played" can come later.
-            var steamAppID: Long = (apiGame.get("appid") as Integer).toLong()
             game.playTime = (apiGame.get("playtime_forever") as Integer).toLong()
+
+            // add the app ID to the game's SteamId
+            game.steamId = steamAppID
 
             // make an API request for IGDB, then delay for ms so you don't get rate limited
             var igdbResponse: JSONArray = IGDBSource.makeAPICall(
@@ -80,25 +89,41 @@ class SteamDataSource(override var userId: String) : RemoteLibraryDataSource() {
             igdbResponseObj = igdbResponse.get(0) as JSONObject
             if (!igdbResponseObj.has("summary") ||
                 !igdbResponseObj.has("name")
-                ) // Note: Some games don't have genre for whatever reason. Peggle Deluxe doesn't, for example.
-                throw APIException("Specific attribute not received from the response: igdbResponse is $igdbResponse")
-            // Add the info to the Game object
+                ) { // Note: Some games don't have genre for whatever reason. Peggle Deluxe doesn't, for example.
+                Log.w("Specific attribute not received from the response:", "$igdbResponse")
+                continue
+            } // Add the info to the Game object
 
             // add Description, Title
             game.description = igdbResponseObj.get("summary") as String
             game.title = igdbResponseObj.get("name") as String
-            game.sortingName = game.title // TODO add proper sorting name functionality
+            game.sortingName = getSortingName(game.title)
             /*
             TODO: Genre is not added yet since that'd require looping and also associating
             IGDB values with strings, which is outside the wheelhouse for now.
              */
 
+            // make a third API call for the image ID from which you can construct a URL out of
+            // the endpoint should be "covers"
+            // and the body should be "fields image_id; where game = ${game_id};"
+            // then set the imageURL to "https://images.igdb.com/igdb/image/upload/t_cover_big/${imageID}.jpg"
+            igdbResponse = IGDBSource.makeAPICall(
+                "covers",
+                "fields image_id; where game = ${game.igdbId};")
+            igdbResponseObj = igdbResponse.get(0) as JSONObject
+            if (!igdbResponseObj.has("image_id")
+            ) {
+                Log.w("image_id not received from the response. Skipping adding image:", "$igdbResponse")
+            } else {
+                var imageId = igdbResponseObj.get("image_id")
+                game.imageUrl = "https://images.igdb.com/igdb/image/upload/t_cover_big/${imageId}.jpg"
+            }
+
             // Add PC (because it's Steam!)
             game.platform.plus("PC")
-
+            game.source.plus(libraryName)
             // Add features to this in the future perhaps, but otherwise you are done!
             emit(game)
-            Log.i("Game added!", "{title: ${game.title}, igdbId: ${game.igdbId}, id: ${game.id}}")
         }
 
     }

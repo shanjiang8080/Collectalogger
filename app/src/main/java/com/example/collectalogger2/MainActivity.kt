@@ -11,6 +11,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.example.collectalogger2.navigation.CollectaloggerNavGraph
 import com.example.collectalogger2.ui.theme.Collectalogger2Theme
 import com.example.collectalogger2.BuildConfig
@@ -27,3 +29,5 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+fun CreationExtras.collectaloggerApplication(): CollectaloggerApplication =
+    (this[AndroidViewModelFactory.APPLICATION_KEY] as CollectaloggerApplication)

@@ -4,11 +4,17 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import android.content.Context
+import androidx.room.AutoMigration
 import androidx.room.TypeConverters
 import com.example.collectalogger2.util.Converters
 
 // increase the version whenever you change the schema of the database table.
-@Database(entities = [Game::class], version = 1, exportSchema = false)
+@Database(
+    entities = [Game::class],
+    version = 1,
+    exportSchema = true,
+    autoMigrations = [
+    ])
 @TypeConverters(Converters::class)
 abstract class GameDatabase : RoomDatabase() {
     abstract fun gameDao(): GameDao

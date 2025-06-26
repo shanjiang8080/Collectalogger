@@ -23,12 +23,13 @@ class AppDataContainer(private val context: Context) : AppContainer {
      * Implementation for [GameLibraryRepository]
      */
     override val gameLibraryRepository: GameLibraryRepository by lazy {
+        val gameDao = GameDatabase.getDatabase(context).gameDao()
         GameLibraryRepository(
             remoteLibraryDataSources = emptyList<RemoteLibraryDataSource>()
-                .plus(SteamDataSource("76561198424115282")), // Can add more DataSources later,
+                .plus(SteamDataSource("76561198424115282", gameDao)), // Can add more DataSources later,
             // Also, TODO create a DAO for platform (e.g: Steam) user IDs
             localDataSource = LocalDataSource(),
-            gameDao = GameDatabase.getDatabase(context).gameDao()
+            gameDao = gameDao
         )
     }
 }

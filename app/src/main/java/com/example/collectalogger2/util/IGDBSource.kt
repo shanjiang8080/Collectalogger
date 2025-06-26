@@ -20,7 +20,7 @@ object IGDBSource {
     private val client = HttpClient(Android)
     private val mutex = Mutex()
     private var lastRequestTime = 0L
-    private const val RATE_LIMIT_DELAY_MS = 500L // Conservative compared to 4 per second
+    private const val RATE_LIMIT_DELAY_MS = 300L // Conservative compared to 4 per second
 
     /**
      * This method creates an API call to IGDB given an endpoint (e.g: games)

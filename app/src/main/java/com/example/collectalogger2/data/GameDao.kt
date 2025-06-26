@@ -27,6 +27,9 @@ interface GameDao {
     @Query("SELECT * from games WHERE igdbId = :igdbId")
     fun getGameByIGDBId(igdbId: Long): Game?
 
+    @Query("SELECT * from games WHERE steamId = :steamId")
+    fun getGameBySteamId(steamId: Long): Game?
+
     @Query("SELECT * from games WHERE igdbId = :igdbId")
     fun getGameStreamByIGDBId(igdbId: Long): Flow<Game?>
 
