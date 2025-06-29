@@ -38,7 +38,7 @@ import coil3.compose.AsyncImage
 import com.example.collectalogger2.R
 import com.example.collectalogger2.data.Game
 
-
+// TODO add a back button at the top left corner
 @Composable
 fun DetailScreen(
     viewModel: DetailViewModel,
@@ -61,24 +61,12 @@ fun DetailScreenBody(game: Game) {
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
 
     Box(modifier = Modifier.fillMaxSize()) {
-        val imageModifier = Modifier.height(screenHeight / 2)
-        if (game.backgroundUrl != "") {
-            AsyncImage(
-                model = game.backgroundUrl,
-                contentDescription = game.description,
-                modifier = imageModifier
-            )
-        } else {
-            Image(
-                painter = painterResource(id = R.drawable.background_placeholder),
-                contentDescription = "Placeholder background",
-                contentScale = ContentScale.Crop,
-                modifier = imageModifier
-            )
-        }
+        BackgroundImage(screenHeight, game)
 
         Card(
-            modifier = Modifier.padding(top = screenHeight / 3).fillMaxHeight()
+            modifier = Modifier
+                .padding(top = screenHeight / 3)
+                .fillMaxHeight()
         ) {
             Column(
 
@@ -135,10 +123,26 @@ fun DetailScreenPreview() {
 @Composable
 fun BackgroundImage(
     screenHeight: Dp,
-    screenWidth: Dp,
-    imageUrl: String = "",
-    description: String = "",
+    game: Game
 ) {
+    val imageModifier = Modifier
+        .height(screenHeight / 2)
+        .fillMaxWidth()
+    if (game.backgroundUrl != "") {
+        AsyncImage(
+            model = game.backgroundUrl,
+            contentDescription = "Background art of ${game.title}",
+            contentScale = ContentScale.Crop,
+            modifier = imageModifier
+        )
+    } else {
+        Image(
+            painter = painterResource(id = R.drawable.background_placeholder),
+            contentDescription = "Placeholder background",
+            contentScale = ContentScale.Crop,
+            modifier = imageModifier
+        )
+    }
 }
 
 @Composable

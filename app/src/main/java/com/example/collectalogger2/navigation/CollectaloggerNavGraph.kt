@@ -8,10 +8,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.toRoute
 import com.example.collectalogger2.AppContainer
@@ -56,7 +59,7 @@ fun CollectaloggerNavGraph(
 
             composable<Gallery> { backStackEntry ->
                 val gallery: Gallery = backStackEntry.toRoute()
-                val galleryViewModel = GalleryViewModel(container = appContainer)
+                val galleryViewModel: GalleryViewModel = viewModel()
                 GalleryScreen(
                     viewModel = galleryViewModel,
                     onNavigateToDetail = { id -> navController.navigate(route = DetailView(id)) }

@@ -21,8 +21,8 @@ import kotlinx.coroutines.flow.update
 import android.util.Log
 
 data class GalleryUiState(
-    val sort: Sort? = Sort(SortBy.RELEASED, false),
-    val filter: Filter? = null,
+    val sort: Sort? = Sort(SortBy.RELEASED, false), // TODO Filter is not implemented
+    val filter: Filter? = null, // TODO Filter is not implemented
     val games: List<Game> = emptyList()
 )
 
@@ -31,8 +31,23 @@ class GalleryViewModel(val container: AppContainer) : ViewModel() {
     // like, for example, Steam account ID
     var repository = container.gameLibraryRepository
 
-    private val _games: List<Game> = emptyList()
-    private val _uiState = MutableStateFlow(GalleryUiState(games = _games))
+    private var cachedGames: List<Game>? = null
+
+    fun loadGames() {
+        // get cached data, if available
+        cachedGames?.let { games ->
+            _uiState.update { it.copy(games = games) }
+            return
+        }
+        viewModelScope.launch {
+            val gamesFromDb = repository.getAllGames()
+            cachedGames = gamesFromDb
+            _uiState.update { it.copy(games = gamesFromDb) }
+        }
+    }
+
+    private lateinit var _games: List<Game>
+    private var _uiState = MutableStateFlow(GalleryUiState())
     init {
         viewModelScope.launch(Dispatchers.IO) {
             val games = repository.getAllGames()

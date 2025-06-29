@@ -24,16 +24,17 @@ class DetailViewModel(val container: AppContainer, val gameId: Long) : ViewModel
         // load the game
         viewModelScope.launch(Dispatchers.IO) {
             _game.value = container.gameLibraryRepository.getGameById(gameId)
+            // make an API call if missing elements.
+            if (game.value?.backgroundUrl == "") { // TODO add this functionality
+                updateGame()
+            }
         }
-        // make an API call if missing elements.
-        if (false) { // TODO add this functionality
-            updateGame()
-        }
+
     }
 
     fun updateGame() {
         viewModelScope.launch(Dispatchers.IO) {
-            // TODO not implemented.
+            container.gameLibraryRepository.getAuxiliaryInformation(game.value as Game)
         }
     }
 }

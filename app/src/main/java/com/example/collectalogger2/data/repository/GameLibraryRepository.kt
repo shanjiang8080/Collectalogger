@@ -7,9 +7,11 @@ import com.example.collectalogger2.data.datasource.LocalDataSource
 import com.example.collectalogger2.data.datasource.RemoteLibraryDataSource
 import com.example.collectalogger2.util.APIException
 import com.example.collectalogger2.util.APIStatusException
+import com.example.collectalogger2.util.IGDBSource
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import org.json.JSONObject
 
 
 // I should replace the `remoteLibraryDataSource` with a list of them
@@ -79,5 +81,28 @@ class GameLibraryRepository(
                 break
             }
         }
+    }
+
+    /**
+     * This method calls IGDB and gets extra information like the game background.
+     * TODO will get more information in the future (like websites)
+     */
+    suspend fun getAuxiliaryInformation(game: Game) {
+        var igdbResponse = IGDBSource.makeAPICall(
+            "artworks",
+            "fields image_id; where game = ${game.igdbId};"
+        )
+        if (igdbResponse.length() > 0 && (igdbResponse.get(0) as JSONObject).has("image_id")) {
+            var igdbResponseObj = igdbResponse.get(0) as JSONObject
+            var imageId = igdbResponseObj.get("image_id")
+            game.backgroundUrl = "https://images.igdb.com/igdb/image/upload/t_720p/${imageId}.jpg"
+        } else {
+            Log.w("This game has no artwork!", game.title)
+        }
+
+        // TODO other metadata here
+
+        // after doing this, save the game!
+        updateGame(game)
     }
 }

@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
@@ -23,6 +25,7 @@ import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
@@ -47,6 +50,9 @@ fun GalleryScreen(
     onNavigateToDetail: (id: Long) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val listState = rememberSaveable(saver = LazyGridState.Saver) {
+        LazyGridState()
+    }
     // eventually, the uiState can be changed by filters.
     // not now, though.
 
@@ -64,9 +70,10 @@ fun GalleryScreen(
             .wrapContentSize()
         // eventually, make the size changeable via a setting!
         LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 133.dp),
+            columns = GridCells.Adaptive(133.dp),
             horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
+            state = listState
         ) {
             items(uiState.games) {
                 GalleryGame(it, onNavigateToDetail)
