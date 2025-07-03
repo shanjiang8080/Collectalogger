@@ -7,6 +7,7 @@ import com.example.collectalogger2.data.datasource.LocalDataSource
 import com.example.collectalogger2.data.datasource.RemoteLibraryDataSource
 import com.example.collectalogger2.util.APIException
 import com.example.collectalogger2.util.APIStatusException
+import com.example.collectalogger2.util.AccountException
 import com.example.collectalogger2.util.IGDBSource
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -70,7 +71,11 @@ class GameLibraryRepository(
                         Log.e("APIStatusException happened with HTTP code ${e.statusCode}", e.message ?: "")
                     } else if (e is APIException) {
                         Log.e("APIException happened", e.message ?: "")
-                    } else {
+                    } else if (e is AccountException) {
+                        Log.e("AccountException happened", e.message ?: "")
+                        break // go to the next DataSource
+                    }
+                    else {
                         Log.e("Exception happened", e.message ?: "")
                         throw e
                     }
@@ -85,9 +90,11 @@ class GameLibraryRepository(
 
     /**
      * This method calls IGDB and gets extra information like the game background.
+     * It returns the updated Game.
      * TODO will get more information in the future (like websites)
      */
-    suspend fun getAuxiliaryInformation(game: Game) {
+    suspend fun getAuxiliaryInformation(game: Game): Game {
+        var updatedGame = game.copy()
         var igdbResponse = IGDBSource.makeAPICall(
             "artworks",
             "fields image_id; where game = ${game.igdbId};"
@@ -95,7 +102,7 @@ class GameLibraryRepository(
         if (igdbResponse.length() > 0 && (igdbResponse.get(0) as JSONObject).has("image_id")) {
             var igdbResponseObj = igdbResponse.get(0) as JSONObject
             var imageId = igdbResponseObj.get("image_id")
-            game.backgroundUrl = "https://images.igdb.com/igdb/image/upload/t_720p/${imageId}.jpg"
+            updatedGame = updatedGame.copy(backgroundUrl = "https://images.igdb.com/igdb/image/upload/t_720p/${imageId}.jpg")
         } else {
             Log.w("This game has no artwork!", game.title)
         }
@@ -103,6 +110,8 @@ class GameLibraryRepository(
         // TODO other metadata here
 
         // after doing this, save the game!
-        updateGame(game)
+        updateGame(updatedGame)
+        Log.i("Updated game!", updatedGame.title)
+        return updatedGame
     }
 }

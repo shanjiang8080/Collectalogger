@@ -16,6 +16,10 @@ import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import org.json.JSONObject
 
+/**
+ * This handles all API requests to IGDB.
+ * Raw IGDB requests are discouraged.
+ */
 object IGDBSource {
     private val client = HttpClient(Android)
     private val mutex = Mutex()
@@ -51,7 +55,12 @@ object IGDBSource {
                     }
                     setBody(request_body)
                 }.bodyAsText()
-                if (igdbResponse[0] != '[') throw Exception("Did not return a JSON Array. Instead returned $igdbResponse")
+                if (igdbResponse[0] != '[') {
+                    // continue for other exception types
+                    if (igdbResponse.contains("429")) throw APIStatusException("Too Many Requests", 429)
+                    if (igdbResponse.contains("Forbidden")) throw APIStatusException("Forbidden", 403)
+                    throw APIException("Did not return a JSON Array. Instead returned $igdbResponse")
+                }
             } catch (ex: Exception) {
                 throw APIException("IGDB API call failed with message: ${ex.message}")
             }

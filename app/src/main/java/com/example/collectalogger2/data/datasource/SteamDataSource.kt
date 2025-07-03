@@ -10,7 +10,9 @@ import com.example.collectalogger2.BuildConfig
 import com.example.collectalogger2.data.GameDao
 import com.example.collectalogger2.util.APIException
 import com.example.collectalogger2.util.APIStatusException
+import com.example.collectalogger2.util.AccountException
 import com.example.collectalogger2.util.IGDBSource
+import com.example.collectalogger2.util.SteamSource
 import io.ktor.client.request.header
 import io.ktor.client.request.headers
 import io.ktor.client.request.request
@@ -18,6 +20,7 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import org.json.JSONArray
 import org.json.JSONObject
@@ -27,26 +30,24 @@ import org.json.JSONObject
  * The bare minimum, you must get the steam library working.
  *
  */
-class SteamDataSource(override var userId: String, gameDao: GameDao) : RemoteLibraryDataSource(gameDao) {
+class SteamDataSource(var userIdFlow: Flow<String>, gameDao: GameDao) : RemoteLibraryDataSource(gameDao) {
     override var libraryName: String = "Steam"
 
+
     override suspend fun getGames(forceUpdate: Boolean): Flow<Game> = flow {
+        // get the user ID
+        val userId = userIdFlow.first()
+        if (userId == "") throw AccountException("User is not logged into Steam!", libraryName)
         // so what you do, is that you gotta use the API-key
-        val client = HttpClient(Android)
-        val response: HttpResponse = client.get("https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${BuildConfig.STEAM_API_KEY}&input_json={\"steamid\":${userId}}")
-        client.close()
-        var responseText = response.bodyAsText()
-        // check that it doesn't give a 429 error
-        if (responseText[0] == '<' && responseText.contains("429")) {
-            throw APIStatusException("Too Many Requests", 429)
-        }
-        if (!responseText.contains("games")) {
-            throw APIException("No games in the JSON, instead the body is $responseText")
-        }
-        // if not, parse it as JSON
-        val jsonObject = JSONObject(responseText)
+        // Make an API call to Steam
+        val jsonObject = SteamSource.makeAPICall(
+            endpoint = "IPlayerService",
+            endpoint2 = "GetOwnedGames",
+            version = 1,
+            mapOf("steamid" to userId)
+        )
         // assert that it has a list of games
-        Log.i("Steam games fetched!", responseText)
+        Log.i("Steam games fetched!", "")
         val responseJSON: JSONObject = jsonObject.get("response") as JSONObject
         val games = responseJSON.get("games") as JSONArray
         // this has many games
@@ -59,12 +60,12 @@ class SteamDataSource(override var userId: String, gameDao: GameDao) : RemoteLib
             if (!forceUpdate && gameDao.getGameBySteamId(steamAppID) != null) continue
 
             // Make a new Game object to store the information
-            val game = Game()
+            var game = Game()
             // for each game, get the appID, playtime. "Last Played" can come later.
-            game.playTime = (apiGame.get("playtime_forever") as Integer).toLong()
+            game = game.copy(playTime = (apiGame.get("playtime_forever") as Integer).toLong())
 
             // add the app ID to the game's SteamId
-            game.steamId = steamAppID
+            game = game.copy(steamId = steamAppID)
 
             // make an API request for IGDB, then delay for ms so you don't get rate limited
             var igdbResponse: JSONArray = IGDBSource.makeAPICall(
@@ -81,7 +82,7 @@ class SteamDataSource(override var userId: String, gameDao: GameDao) : RemoteLib
             }
 
 
-            game.igdbId = (igdbResponseObj.get("game") as Integer).toLong()
+            game = game.copy(igdbId = (igdbResponseObj.get("game") as Integer).toLong())
             // Now that you have the igdbID, make another API call to get info on the game.
             igdbResponse = IGDBSource.makeAPICall(
                 "games",
@@ -95,9 +96,9 @@ class SteamDataSource(override var userId: String, gameDao: GameDao) : RemoteLib
             } // Add the info to the Game object
 
             // add Description, Title
-            game.description = igdbResponseObj.get("summary") as String
-            game.title = igdbResponseObj.get("name") as String
-            game.sortingName = getSortingName(game.title)
+            game = game.copy(description = igdbResponseObj.get("summary") as String)
+            game = game.copy(title = igdbResponseObj.get("name") as String)
+            game = game.copy(sortingName = getSortingName(game.title))
             /*
             TODO: Genre is not added yet since that'd require looping and also associating
             IGDB values with strings, which is outside the wheelhouse for now.
@@ -116,7 +117,7 @@ class SteamDataSource(override var userId: String, gameDao: GameDao) : RemoteLib
                 Log.w("image_id not received from the response. Skipping adding image:", "$igdbResponse")
             } else {
                 var imageId = igdbResponseObj.get("image_id")
-                game.imageUrl = "https://images.igdb.com/igdb/image/upload/t_cover_big/${imageId}.jpg"
+                game = game.copy(imageUrl = "https://images.igdb.com/igdb/image/upload/t_cover_big/${imageId}.jpg")
             }
 
             // Add PC (because it's Steam!)

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.ShoppingCart
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -30,6 +31,7 @@ import com.example.collectalogger2.navigation.WishList
 fun BottomAppBar(
     onNavigateToWishlist: () -> Unit,
     onNavigateToGallery: () -> Unit,
+    onNavigateToSettings: () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -37,10 +39,9 @@ fun BottomAppBar(
     )
     {
         // icons, add more as necessary.
-        BottomNavItem("Wishlist", Icons.Rounded.ShoppingCart)
-        { onNavigateToWishlist }
-        BottomNavItem("Gallery", Icons.Rounded.Home)
-        { onNavigateToGallery }
+        BottomNavItem("Wishlist", Icons.Rounded.ShoppingCart, onNavigateToWishlist)
+        BottomNavItem("Gallery", Icons.Rounded.Home, onNavigateToGallery)
+        BottomNavItem("Settings", Icons.Rounded.Settings, onNavigateToSettings)
     }
 }
 
@@ -79,5 +80,5 @@ fun ShoppingNavItem() {
 )
 @Composable
 fun BarPreview() {
-    BottomAppBar({}, {})
+    BottomAppBar({}, {}, {})
 }

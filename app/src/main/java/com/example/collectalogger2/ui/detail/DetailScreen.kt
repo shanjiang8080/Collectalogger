@@ -1,39 +1,34 @@
 package com.example.collectalogger2.ui.detail
 
-import android.R.attr.contentDescription
-import android.media.Image
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.example.collectalogger2.R
 import com.example.collectalogger2.data.Game
@@ -42,7 +37,6 @@ import com.example.collectalogger2.data.Game
 @Composable
 fun DetailScreen(
     viewModel: DetailViewModel,
-    game: Game? = null,
 ) {
 
     val realGame by viewModel.game.collectAsStateWithLifecycle()
@@ -60,16 +54,21 @@ fun DetailScreenBody(game: Game) {
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .verticalScroll(rememberScrollState())
+    ) {
         BackgroundImage(screenHeight, game)
 
         Card(
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            ),
             modifier = Modifier
                 .padding(top = screenHeight / 3)
-                .fillMaxHeight()
+                .fillMaxWidth()
         ) {
             Column(
-
             ) {
                 Box(
                     modifier = Modifier
@@ -80,15 +79,26 @@ fun DetailScreenBody(game: Game) {
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                         modifier = Modifier
-                            .padding(top = 60.dp)
+                            .padding(top = 65.dp)
                             .padding(10.dp)
-
                     ) {
-                        Text(game.title, fontWeight = FontWeight.Black, fontSize = 30.sp)
+                        Text(
+                            text = game.title,
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                            )
 
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text("Description", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                            Text(game.description)
+                            Text(
+                                text = "Description",
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = game.description,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
                         }
                     }
                 }
@@ -96,11 +106,10 @@ fun DetailScreenBody(game: Game) {
         }
 
         CoverArt(game, screenWidth, Modifier
-            .padding(top = screenHeight / 10)
+            .padding(top = screenHeight / 11)
             .align(Alignment.TopCenter)
             .wrapContentSize(unbounded = true, align = Alignment.TopStart)
         )
-
     }
 }
 
@@ -128,6 +137,7 @@ fun BackgroundImage(
     val imageModifier = Modifier
         .height(screenHeight / 2)
         .fillMaxWidth()
+        .blur(5.dp) // NOTE: Only works on Android 12+
     if (game.backgroundUrl != "") {
         AsyncImage(
             model = game.backgroundUrl,

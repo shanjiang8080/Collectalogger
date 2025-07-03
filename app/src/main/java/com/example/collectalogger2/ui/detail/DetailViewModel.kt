@@ -1,6 +1,8 @@
 package com.example.collectalogger2.ui.detail
 
+import android.os.Bundle
 import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.AbstractSavedStateViewModelFactory
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -8,6 +10,7 @@ import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.AP
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
+import androidx.savedstate.SavedStateRegistryOwner
 import com.example.collectalogger2.AppContainer
 import com.example.collectalogger2.CollectaloggerApplication
 import com.example.collectalogger2.data.Game
@@ -16,12 +19,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class DetailViewModel(val container: AppContainer, val gameId: Long) : ViewModel() {
-    var repository = container.gameLibraryRepository
+class DetailViewModel(val container: AppContainer, savedStateHandle: SavedStateHandle) : ViewModel() {
     private val _game = MutableStateFlow<Game?>(null)
     val game = _game.asStateFlow()
+    val gameId: Long = checkNotNull(savedStateHandle["id"])
     init {
-        // load the game
         viewModelScope.launch(Dispatchers.IO) {
             _game.value = container.gameLibraryRepository.getGameById(gameId)
             // make an API call if missing elements.
@@ -29,12 +31,23 @@ class DetailViewModel(val container: AppContainer, val gameId: Long) : ViewModel
                 updateGame()
             }
         }
-
     }
 
-    fun updateGame() {
-        viewModelScope.launch(Dispatchers.IO) {
-            container.gameLibraryRepository.getAuxiliaryInformation(game.value as Game)
-        }
+    suspend fun updateGame() {
+        _game.value = container.gameLibraryRepository.getAuxiliaryInformation(game.value as Game)
+    }
+}
+
+class DetailViewModelFactory(
+    private val container: AppContainer,
+    owner: SavedStateRegistryOwner,
+    defaultArgs: Bundle? = null
+    ) : AbstractSavedStateViewModelFactory(owner, defaultArgs) {
+    override fun <T : ViewModel> create(
+        key: String,
+        modelClass: Class<T>,
+        handle: SavedStateHandle
+    ): T {
+        return DetailViewModel(container, handle) as T
     }
 }

@@ -97,8 +97,6 @@ dependencies {
     // coil for async image loading
     implementation(libs.coil3.coil.compose)
     implementation(libs.coil.network.okhttp)
-    // this is for IGDB
-    implementation(libs.husnjak.igdb.api.jvm)
     // this is for Ktor/calling various non-igdb APIs
     //K-tor
     implementation("io.ktor:ktor-client-android:2.3.4")
@@ -113,7 +111,9 @@ dependencies {
     implementation("androidx.room:room-ktx:$roomVersion")
     ksp("androidx.room:room-compiler:$roomVersion")
 
-
+    // DataStore for settings and such
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.datastore.preferences.core)
 
 
     testImplementation(libs.junit)

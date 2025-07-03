@@ -12,30 +12,30 @@ import java.util.Dictionary
  */
 @Entity(tableName = "games")
 data class Game(
-    var title: String = "",
+    val title: String = "",
     @PrimaryKey(autoGenerate = true)
-    var id: Long = 0, // this is the normal id
+    val id: Long = 0, // this is the normal id
     // Sourced from IGDB but cached
-    var description: String = "",
+    val description: String = "",
     // Title, but excluding The and other articles
-    var sortingName: String = "",
+    val sortingName: String = "",
     // The platform the user has the game on (PC, PS5, Switch, etc).
     // Later on, I'll add non-PC sources that will affect this.
-    var platform: Set<String> = setOf(),
+    val platform: Set<String> = setOf(),
     // The genre, as provided by IGDB.
-    var genre: Set<String> = setOf(),
+    val genre: Set<String> = setOf(),
     // The game libraries (can be multiple) that it is part of.
-    var source: Set<String> = setOf(),
+    val source: Set<String> = setOf(),
     // Play status (set manually)
-    var status: String = "",
+    val status: String = "",
     // The ID that IGDB uses. Of course, set by IGDB.
-    var igdbId: Long = -1,
+    val igdbId: Long = -1,
     // The URL for IGDB cover.
-    var imageUrl: String = "",
+    val imageUrl: String = "",
     // The URL for IGDB image background.
-    var backgroundUrl: String = "",
-    var playTime: Long = 0,
+    val backgroundUrl: String = "",
+    val playTime: Long = 0,
     // adding a steamId for this
-    var steamId: Long = -1,
+    val steamId: Long = -1,
 ) {
 }

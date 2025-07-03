@@ -10,8 +10,6 @@ import kotlinx.coroutines.flow.Flow
  */
 
 abstract class RemoteLibraryDataSource(val gameDao: GameDao) {
-    // It has a userID for like, SteamID, or Epic ID, etc.
-    abstract var userId: String
     // So like, Steam, or Epic, or GOG, or whatever.
     abstract var libraryName: String
     /**

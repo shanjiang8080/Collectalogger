@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import android.util.Log
+import androidx.lifecycle.ViewModelProvider
 
 data class GalleryUiState(
     val sort: Sort? = Sort(SortBy.RELEASED, false), // TODO Filter is not implemented
@@ -39,7 +40,7 @@ class GalleryViewModel(val container: AppContainer) : ViewModel() {
             _uiState.update { it.copy(games = games) }
             return
         }
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val gamesFromDb = repository.getAllGames()
             cachedGames = gamesFromDb
             _uiState.update { it.copy(games = gamesFromDb) }
@@ -49,11 +50,7 @@ class GalleryViewModel(val container: AppContainer) : ViewModel() {
     private lateinit var _games: List<Game>
     private var _uiState = MutableStateFlow(GalleryUiState())
     init {
-        viewModelScope.launch(Dispatchers.IO) {
-            val games = repository.getAllGames()
-            _uiState.value = _uiState.value.copy(games = games)
-            // Log.i("Games list: ", "${repository.getAllGames()}")
-        }
+        loadGames()
     }
     val uiState: StateFlow<GalleryUiState> = _uiState.asStateFlow()
 
@@ -74,5 +71,13 @@ class GalleryViewModel(val container: AppContainer) : ViewModel() {
             val games = repository.getAllGames()
             _uiState.value = _uiState.value.copy(games = games)
         }
+    }
+}
+
+class GalleryViewModelFactory(
+    private val container: AppContainer
+    ) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        return GalleryViewModel(container) as T
     }
 }

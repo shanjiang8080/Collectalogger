@@ -1,9 +1,11 @@
 package com.example.collectalogger2.ui.wishlist
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import com.example.collectalogger2.AppContainer
 import com.example.collectalogger2.data.repository.GameWishlistRepository
 import com.example.collectalogger2.data.WishlistGame
+import com.example.collectalogger2.ui.gallery.GalleryViewModel
 import com.example.collectalogger2.util.Filter
 import com.example.collectalogger2.util.Sort
 import com.example.collectalogger2.util.SortBy
@@ -37,4 +39,12 @@ class WishListViewModel(val container: AppContainer) : ViewModel() {
         }
     }
 
+}
+
+class WishListViewModelFactory(
+    private val container: AppContainer
+    ) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        return WishListViewModel(container) as T
+    }
 }

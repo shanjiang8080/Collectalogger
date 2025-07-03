@@ -132,8 +132,7 @@ fun GalleryGame(
 )
 @Composable
 fun GalleryGamePreview() {
-    val game = Game("Penny's Big Breakaway", 10)
-    game.imageUrl = "https://upload.wikimedia.org/wikipedia/en/a/a0/Penny%27s_Big_Breakaway_box_art.jpg"
+    val game = Game("Penny's Big Breakaway", 10, imageUrl = "https://upload.wikimedia.org/wikipedia/en/a/a0/Penny%27s_Big_Breakaway_box_art.jpg")
     GalleryGame(game, {})
 
 }

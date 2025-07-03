@@ -6,11 +6,15 @@ import com.example.collectalogger2.data.datasource.LocalDataSource
 import com.example.collectalogger2.data.datasource.RemoteLibraryDataSource
 import com.example.collectalogger2.data.datasource.SteamDataSource
 import com.example.collectalogger2.data.repository.GameLibraryRepository
+import com.example.collectalogger2.data.repository.SettingsRepository
+import com.example.collectalogger2.util.dataStore
+import kotlinx.coroutines.flow.map
 
 /**
  * App container for Dependency injection.
  */
 interface AppContainer {
+    val settingsRepository: SettingsRepository
     val gameLibraryRepository: GameLibraryRepository
 }
 
@@ -22,11 +26,17 @@ class AppDataContainer(private val context: Context) : AppContainer {
     /**
      * Implementation for [GameLibraryRepository]
      */
+    override val settingsRepository: SettingsRepository by lazy {
+        SettingsRepository(
+            dataStore = context.dataStore
+        )
+    }
     override val gameLibraryRepository: GameLibraryRepository by lazy {
         val gameDao = GameDatabase.getDatabase(context).gameDao()
+
         GameLibraryRepository(
             remoteLibraryDataSources = emptyList<RemoteLibraryDataSource>()
-                .plus(SteamDataSource("76561198424115282", gameDao)), // Can add more DataSources later,
+                .plus(SteamDataSource(settingsRepository.steamId, gameDao)), // Can add more DataSources later,
             // Also, TODO create a DAO for platform (e.g: Steam) user IDs
             localDataSource = LocalDataSource(),
             gameDao = gameDao
