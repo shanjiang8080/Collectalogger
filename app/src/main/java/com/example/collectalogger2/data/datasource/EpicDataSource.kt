@@ -9,11 +9,9 @@ import com.example.collectalogger2.util.IGDBSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
-import kotlinx.serialization.json.JsonObject
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.Duration
-
 import java.time.Instant
 
 
@@ -92,9 +90,6 @@ class EpicDataSource(
             // set the epic ID (which i'm making up)
             newGame = newGame.copy(epicId = epicId)
 
-            // TODO add caching later, also update playtimes before though
-            // when adding caching, add a epic "ID" that's a concatenation of the catalogItemID + namespace
-            // get the catalog item based on the namespace and ID
             var catalogResponseRaw = (EpicSource.makeAPICall(
                 domain = "catalog-public-service-prod06.ol.epicgames.com",
                 path = "catalog/api/shared/namespace/${epicGame.get("namespace")}/bulk/items?id=${epicGame.get("catalogItemId")}&country=US&locale=en-US&includeMainGameDetails=true",
@@ -126,8 +121,6 @@ class EpicDataSource(
             ) {
                 continue
             }
-            // TODO trademarks are a problem, strip them. also colons are bad but that's harder to fix.
-            // TODO also try using the slug of the main game as a fallback!!!!
 
             var sanitizedTitle = catalogResponse.getString("title").replace("\"", "\\\"")
 
@@ -189,7 +182,7 @@ class EpicDataSource(
 
             }
             // set the igdbId of the game
-            newGame = newGame.copy(igdbId = igdbId!!)
+            newGame = newGame.copy(igdbId = igdbId)
             // now, make a second call to IGDB to get the info.
             igdbResponse = IGDBSource.makeAPICall(
                 "games",
@@ -252,7 +245,6 @@ class EpicDataSource(
         var refreshExpiry = Instant.parse(json.get("refresh_expires_at") as String)
         // if so, throw an exception
         if (!now.isBefore(refreshExpiry))
-            // TODO make a specific exception that can be caught to log in again
             throw AccountException("Cannot refresh login! Must log in again to Epic Games!", libraryName)
         // call a refresh.
         val newJson = EpicSource.makeAPICall(

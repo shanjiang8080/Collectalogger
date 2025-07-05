@@ -1,6 +1,5 @@
 package com.example.collectalogger2.util
 
-import android.util.Log
 import com.example.collectalogger2.BuildConfig
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
@@ -14,7 +13,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
-import org.json.JSONObject
 import java.util.concurrent.CancellationException
 
 /**

@@ -11,7 +11,6 @@ import com.example.collectalogger2.util.AccountException
 import com.example.collectalogger2.util.IGDBSource
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
 import org.json.JSONArray
 import org.json.JSONObject
 

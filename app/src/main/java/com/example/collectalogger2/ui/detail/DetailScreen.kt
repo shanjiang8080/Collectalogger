@@ -1,5 +1,6 @@
 package com.example.collectalogger2.ui.detail
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,6 +50,7 @@ fun DetailScreen(
 
 }
 
+@SuppressLint("DefaultLocale")
 @Composable
 fun DetailScreenBody(game: Game) {
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp

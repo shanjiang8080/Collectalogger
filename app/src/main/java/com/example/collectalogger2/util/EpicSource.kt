@@ -1,21 +1,13 @@
 package com.example.collectalogger2.util
 
-import com.example.collectalogger2.BuildConfig
 import io.ktor.client.HttpClient
-import io.ktor.client.call.body
 import io.ktor.client.engine.android.Android
-import io.ktor.client.request.forms.FormDataContent
 import io.ktor.client.request.forms.submitForm
 import io.ktor.client.request.headers
-import io.ktor.client.request.get
-import io.ktor.client.request.post
 import io.ktor.client.request.request
-import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
-import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.Parameters
-import io.ktor.http.parameters
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock

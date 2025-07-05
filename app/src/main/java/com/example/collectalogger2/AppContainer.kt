@@ -9,7 +9,6 @@ import com.example.collectalogger2.data.datasource.SteamDataSource
 import com.example.collectalogger2.data.repository.GameLibraryRepository
 import com.example.collectalogger2.data.repository.SettingsRepository
 import com.example.collectalogger2.util.dataStore
-import kotlinx.coroutines.flow.map
 
 /**
  * App container for Dependency injection.

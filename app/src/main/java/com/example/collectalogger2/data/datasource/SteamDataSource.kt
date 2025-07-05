@@ -2,24 +2,11 @@ package com.example.collectalogger2.data.datasource
 
 import android.util.Log
 import com.example.collectalogger2.data.Game
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.android.Android
-import io.ktor.client.request.get
-import kotlinx.coroutines.flow.Flow
-import com.example.collectalogger2.BuildConfig
 import com.example.collectalogger2.data.GameDao
-import com.example.collectalogger2.util.APIException
-import com.example.collectalogger2.util.APIStatusException
 import com.example.collectalogger2.util.AccountException
 import com.example.collectalogger2.util.IGDBSource
 import com.example.collectalogger2.util.SteamSource
-import io.ktor.client.request.header
-import io.ktor.client.request.headers
-import io.ktor.client.request.request
-import io.ktor.client.statement.HttpResponse
-import io.ktor.client.statement.bodyAsText
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpMethod
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import org.json.JSONArray

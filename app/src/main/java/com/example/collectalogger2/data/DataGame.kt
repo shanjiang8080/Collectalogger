@@ -3,8 +3,6 @@ package com.example.collectalogger2.data
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.example.collectalogger2.util.LibraryEnum
-import java.util.Dictionary
 
 /**
  * model class for a Game.

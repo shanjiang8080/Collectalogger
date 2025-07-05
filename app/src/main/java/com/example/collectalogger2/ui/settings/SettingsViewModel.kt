@@ -11,8 +11,6 @@ import com.example.collectalogger2.util.SteamSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
@@ -125,6 +123,7 @@ class SettingsViewModel(val container: AppContainer) : ViewModel() {
     }
 }
 
+@Suppress("UNCHECKED_CAST")
 class SettingsViewModelFactory(
     private val container: AppContainer
 ) : ViewModelProvider.Factory {

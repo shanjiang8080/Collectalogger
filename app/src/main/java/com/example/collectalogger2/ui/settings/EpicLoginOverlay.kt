@@ -1,5 +1,6 @@
 package com.example.collectalogger2.ui.settings
 
+import android.annotation.SuppressLint
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -15,12 +16,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.window.Dialog
 import org.json.JSONObject
 
+@SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun EpicOverlay(
     onDismiss: () -> Unit,
     saveEpicID: (String) -> Unit
 ) {
-    val context = LocalContext.current
     var hasHandledResponse = remember { mutableStateOf(false) }
     val onContentReceived: (String) -> Unit = { html ->
         if (!hasHandledResponse.value) {
