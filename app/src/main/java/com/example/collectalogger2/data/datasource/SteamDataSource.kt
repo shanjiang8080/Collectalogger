@@ -57,7 +57,15 @@ class SteamDataSource(var userIdFlow: Flow<String>, gameDao: GameDao) : RemoteLi
             var steamAppID: Long = (apiGame.get("appid") as Integer).toLong()
             // Quick check: If the Steam version of the game exists in the database already,
             // skip.
-            if (!forceUpdate && gameDao.getGameBySteamId(steamAppID) != null) continue
+            var steamGame = gameDao.getGameBySteamId(steamAppID)
+            var newPlayTime = (apiGame.get("playtime_forever") as Integer).toLong()
+            if (!forceUpdate && steamGame != null) {
+                // update the playtime
+                if (newPlayTime != steamGame.playTime)
+                    emit(steamGame.copy(playTime = newPlayTime))
+                // go
+                continue
+            }
 
             // Make a new Game object to store the information
             var game = Game()

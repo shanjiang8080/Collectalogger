@@ -1,5 +1,6 @@
 package com.example.collectalogger2.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.example.collectalogger2.util.LibraryEnum
@@ -34,8 +35,12 @@ data class Game(
     val imageUrl: String = "",
     // The URL for IGDB image background.
     val backgroundUrl: String = "",
+    // the playTime, in minutes. (note that it's the playtime of the version with highest playtime...)
     val playTime: Long = 0,
     // adding a steamId for this
     val steamId: Long = -1,
+    // and an epicId as well, though it's a string.
+    @ColumnInfo(name = "epicId", defaultValue = "")
+    val epicId: String = "",
 ) {
 }

@@ -15,6 +15,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.concurrent.CancellationException
 
 /**
  * This handles all API requests to IGDB.
@@ -62,7 +63,10 @@ object IGDBSource {
                     throw APIException("Did not return a JSON Array. Instead returned $igdbResponse")
                 }
             } catch (ex: Exception) {
-                throw APIException("IGDB API call failed with message: ${ex.message}")
+                if (ex is CancellationException)
+                    throw APIException("IGDB API call failed due to the Job being cancelled. Is the IGDB API proxy reachable?")
+                else
+                    throw APIException("IGDB API call failed with Exception type \"${ex.toString()}\" and message: ${ex.message}")
             }
             // parse igdbResponse as JSON
             return JSONArray(igdbResponse)

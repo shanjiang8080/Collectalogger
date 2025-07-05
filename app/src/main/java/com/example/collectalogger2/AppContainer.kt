@@ -2,6 +2,7 @@ package com.example.collectalogger2
 
 import android.content.Context
 import com.example.collectalogger2.data.GameDatabase
+import com.example.collectalogger2.data.datasource.EpicDataSource
 import com.example.collectalogger2.data.datasource.LocalDataSource
 import com.example.collectalogger2.data.datasource.RemoteLibraryDataSource
 import com.example.collectalogger2.data.datasource.SteamDataSource
@@ -34,9 +35,14 @@ class AppDataContainer(private val context: Context) : AppContainer {
     override val gameLibraryRepository: GameLibraryRepository by lazy {
         val gameDao = GameDatabase.getDatabase(context).gameDao()
 
+
         GameLibraryRepository(
             remoteLibraryDataSources = emptyList<RemoteLibraryDataSource>()
-                .plus(SteamDataSource(settingsRepository.steamId, gameDao)), // Can add more DataSources later,
+                .plus(SteamDataSource(settingsRepository.steamId, gameDao)) // Can add more DataSources later,
+                .plus(EpicDataSource(
+                    userInfoFlow = settingsRepository.epicIdInfo,
+                    userInfoSetter = {str -> settingsRepository.saveEpicIdInfo(str) },
+                    gameDao = gameDao)),
             // Also, TODO create a DAO for platform (e.g: Steam) user IDs
             localDataSource = LocalDataSource(),
             gameDao = gameDao

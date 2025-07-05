@@ -12,6 +12,7 @@ import com.example.collectalogger2.util.IGDBSource
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import org.json.JSONArray
 import org.json.JSONObject
 
 
@@ -56,7 +57,8 @@ class GameLibraryRepository(
                                 update the game with the new information
                                 TODO edit this to append Source, Genre, Platform of games instead of replacing
                                 */
-                                val newGame = game.copy(id = existingGame.id)
+                                val highestPlaytime = maxOf(existingGame.playTime, game.playTime)
+                                val newGame = game.copy(id = existingGame.id, playTime = highestPlaytime)
                                 updateGame(newGame)
                                 Log.i("Game updated!", "{title: ${game.title}, igdbId: ${game.igdbId}, id: ${game.id}}")
                             } else {
@@ -95,10 +97,20 @@ class GameLibraryRepository(
      */
     suspend fun getAuxiliaryInformation(game: Game): Game {
         var updatedGame = game.copy()
-        var igdbResponse = IGDBSource.makeAPICall(
-            "artworks",
-            "fields image_id; where game = ${game.igdbId};"
-        )
+        var igdbResponse: JSONArray
+        try {
+            igdbResponse = IGDBSource.makeAPICall(
+                "artworks",
+                "fields image_id; where game = ${game.igdbId};"
+            )
+        } catch (ex: Exception) {
+            if (ex is APIException) {
+                Log.e("Connection to IGDB API Proxy failed.", ex.message ?: "")
+            } else {
+                Log.e("IGDB Source failed.", ex.message ?: "")
+            }
+            return game
+        }
         if (igdbResponse.length() > 0 && (igdbResponse.get(0) as JSONObject).has("image_id")) {
             var igdbResponseObj = igdbResponse.get(0) as JSONObject
             var imageId = igdbResponseObj.get("image_id")

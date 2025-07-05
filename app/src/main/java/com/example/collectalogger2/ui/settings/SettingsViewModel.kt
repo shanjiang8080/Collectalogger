@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.collectalogger2.AppContainer
 import com.example.collectalogger2.util.APIException
+import com.example.collectalogger2.util.EpicSource
 import com.example.collectalogger2.util.SteamSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,13 +19,18 @@ import org.json.JSONObject
 
 class SettingsViewModel(val container: AppContainer) : ViewModel() {
     private val _steamId = MutableStateFlow<String>("")
+    private val _epicInfo = MutableStateFlow<String>("")
     private val _currentStoreFront = MutableStateFlow<String>("")
     val currentStoreFront = _currentStoreFront.asStateFlow()
     val steamId = _steamId.asStateFlow()
+    val epicInfo = _epicInfo.asStateFlow()
     init {
         viewModelScope.launch {
             container.settingsRepository.steamId.collect { id ->
                 _steamId.value = id
+            }
+            container.settingsRepository.epicIdInfo.collect { id ->
+                _epicInfo.value = id
             }
         }
     }
@@ -87,6 +93,29 @@ class SettingsViewModel(val container: AppContainer) : ViewModel() {
                 Log.i("Steam ID saved!", id)
             } catch (e: Exception) {
                 Log.e("Failed to process Steam ID from URL!", e.message ?: "")
+            }
+        }
+    }
+    /**
+     * Saves the Epic login info to the settings given the code.
+     * Returns true if successful, false if not.
+     */
+    fun saveEpicInfo(code: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // now we have the code, we can authenticate and get the string.
+                val response = EpicSource.makeAPICall(
+                    domain = "account-public-service-prod03.ol.epicgames.com",
+                    path = "account/api/oauth/token",
+                    isGet = false,
+                    headerss = mapOf("Authorization" to "basic MzRhMDJjZjhmNDQxNGUyOWIxNTkyMTg3NmRhMzZmOWE6ZGFhZmJjY2M3Mzc3NDUwMzlkZmZlNTNkOTRmYzc2Y2Y="),
+                    params = mapOf(),
+                    bodyParams = mapOf("grant_type" to "authorization_code", "code" to code)
+                ) as JSONObject
+                container.settingsRepository.saveEpicIdInfo(response.toString())
+                Log.i("Epic login info saved!", response.toString())
+            } catch (ex: Exception) {
+                Log.e("Failed to save Epic Games info!", ex.message ?: "")
             }
         }
     }

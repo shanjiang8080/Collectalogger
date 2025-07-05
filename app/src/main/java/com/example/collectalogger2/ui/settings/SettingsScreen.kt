@@ -20,6 +20,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel
 ) {
     val steamId by viewModel.steamId.collectAsStateWithLifecycle()
+    val epicInfo by viewModel.epicInfo.collectAsStateWithLifecycle()
     val activeStoreFront by viewModel.currentStoreFront.collectAsStateWithLifecycle()
 
     Column() {
@@ -35,11 +36,17 @@ fun SettingsScreen(
                 "Steam button",
                 steamId.isEmpty()
             ) { viewModel.setStoreFront("Steam") }
+            GameLibraryButton(
+                R.drawable.logo_egs,
+                "Epic Games button",
+                epicInfo.isEmpty()
+            ) { viewModel.setStoreFront("Epic") }
         }
     }
 
     when (activeStoreFront) {
         "Steam" -> SteamOverlay(onDismiss = { viewModel.setStoreFront("") }, saveSteamID = { url -> viewModel.saveSteamId(url) })
+        "Epic" -> EpicOverlay(onDismiss = { viewModel.setStoreFront("") }, saveEpicID = { info -> viewModel.saveEpicInfo(info)})
         else -> {}
 
     }

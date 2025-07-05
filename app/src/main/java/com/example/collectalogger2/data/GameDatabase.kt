@@ -11,9 +11,10 @@ import com.example.collectalogger2.util.Converters
 // increase the version whenever you change the schema of the database table.
 @Database(
     entities = [Game::class],
-    version = 1,
+    version = 2,
     exportSchema = true,
     autoMigrations = [
+        AutoMigration (from = 1, to = 2)
     ])
 @TypeConverters(Converters::class)
 abstract class GameDatabase : RoomDatabase() {
