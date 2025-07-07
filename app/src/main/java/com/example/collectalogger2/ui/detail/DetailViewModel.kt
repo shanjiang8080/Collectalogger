@@ -1,18 +1,12 @@
 package com.example.collectalogger2.ui.detail
 
 import android.os.Bundle
-import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.AbstractSavedStateViewModelFactory
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
-import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.savedstate.SavedStateRegistryOwner
 import com.example.collectalogger2.AppContainer
-import com.example.collectalogger2.CollectaloggerApplication
 import com.example.collectalogger2.data.Game
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,7 +15,9 @@ import kotlinx.coroutines.launch
 
 class DetailViewModel(val container: AppContainer, savedStateHandle: SavedStateHandle) : ViewModel() {
     private val _game = MutableStateFlow<Game?>(null)
+    private val _currentDialog = MutableStateFlow<String>("")
     val game = _game.asStateFlow()
+    val currentDialog = _currentDialog.asStateFlow()
     val gameId: Long = checkNotNull(savedStateHandle["id"])
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -36,8 +32,21 @@ class DetailViewModel(val container: AppContainer, savedStateHandle: SavedStateH
     suspend fun updateGame() {
         _game.value = container.gameLibraryRepository.getAuxiliaryInformation(game.value as Game)
     }
+
+    fun setDialog(newValue: String) {
+        _currentDialog.value = newValue
+    }
+
+    fun editPlayStatus(newStatus: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _game.value = _game.value!!.copy(status = newStatus)
+            container.gameLibraryRepository.updateGame(_game.value!!)
+        }
+    }
+
 }
 
+@Suppress("UNCHECKED_CAST")
 class DetailViewModelFactory(
     private val container: AppContainer,
     owner: SavedStateRegistryOwner,

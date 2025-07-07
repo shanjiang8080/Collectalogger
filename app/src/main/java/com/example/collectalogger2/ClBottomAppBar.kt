@@ -1,31 +1,28 @@
 package com.example.collectalogger2
 
-import android.content.Context
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.ShoppingCart
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarDefaults
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
-import com.example.collectalogger2.navigation.Gallery
-import com.example.collectalogger2.navigation.WishList
+import androidx.navigation.compose.rememberNavController
+
+private class _destination(
+    val onNavigate: () -> Unit,
+    val name: String,
+    val icon: ImageVector,
+)
 
 @Composable
 fun BottomAppBar(
@@ -33,46 +30,37 @@ fun BottomAppBar(
     onNavigateToGallery: () -> Unit,
     onNavigateToSettings: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly
+    var selectedDestination by rememberSaveable { mutableIntStateOf(1) /* whatever the gallery is */ }
+    val destinations = listOf(
+        _destination(onNavigateToWishlist, "Wishlist", Icons.Rounded.ShoppingCart),
+        _destination(onNavigateToGallery, "Gallery", Icons.Rounded.Home),
+        _destination(onNavigateToSettings, "Settings", Icons.Rounded.Settings),
+    )
+    NavigationBar(
+        windowInsets = NavigationBarDefaults.windowInsets
     )
     {
         // icons, add more as necessary.
-        BottomNavItem("Wishlist", Icons.Rounded.ShoppingCart, onNavigateToWishlist)
-        BottomNavItem("Gallery", Icons.Rounded.Home, onNavigateToGallery)
-        BottomNavItem("Settings", Icons.Rounded.Settings, onNavigateToSettings)
-    }
-}
-
-@Composable
-fun BottomNavItem(text: String, icon: ImageVector, onClicked: () -> Unit) {
-    FilledTonalButton(
-        contentPadding = ButtonDefaults.TextButtonWithIconContentPadding,
-        onClick = { onClicked() }
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
+        destinations.forEachIndexed { index, destination ->
+            NavigationBarItem(
+                selected = selectedDestination == index,
+                onClick = {
+                    destination.onNavigate()
+                    selectedDestination = index
+                },
+                icon = {
+                    Icon(
+                        destination.icon,
+                        contentDescription = "${destination.name} icon"
+                    )
+                },
+                label = {
+                    Text(destination.name)
+                }
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text)
         }
-    }
-}
 
-@Preview(
-    showBackground = true
-)
-@Composable
-fun ShoppingNavItem() {
-    BottomNavItem("Wishlist", Icons.Rounded.ShoppingCart) {}
+    }
 }
 
 @Preview(

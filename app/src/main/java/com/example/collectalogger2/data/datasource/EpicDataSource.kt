@@ -80,9 +80,14 @@ class EpicDataSource(
             var epicId = "${epicGame.get("namespace")} ${epicGame.get("catalogItemId")}"
             var existingGame = gameDao.getGameByEpicId(epicId)
             if (!forceUpdate && existingGame != null) {
+                var modifiedGame = existingGame.copy(
+                    platform = existingGame.platform.plus("PC"),
+                    source = existingGame.source.plus(libraryName),
+                    playTime = newGame.playTime
+                )
                 // update playtime
-                if (newGame.playTime != existingGame.playTime)
-                    emit(existingGame.copy(playTime = newGame.playTime))
+                if (modifiedGame != existingGame)
+                    emit(modifiedGame)
                 // skip all the other stuff
                 continue
             }
@@ -220,8 +225,8 @@ class EpicDataSource(
             }
 
             // Add PC (because it's Steam!)
-            newGame.platform.plus("PC")
-            newGame.source.plus(libraryName)
+            newGame = newGame.copy(platform = newGame.platform.plus("PC"))
+            newGame = newGame.copy(source = newGame.source.plus(libraryName))
             // Add features to this in the future perhaps, but otherwise you are done!
             emit(newGame)
 

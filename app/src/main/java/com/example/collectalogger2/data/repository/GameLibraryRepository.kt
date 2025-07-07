@@ -9,6 +9,7 @@ import com.example.collectalogger2.util.APIException
 import com.example.collectalogger2.util.APIStatusException
 import com.example.collectalogger2.util.AccountException
 import com.example.collectalogger2.util.IGDBSource
+import com.example.collectalogger2.util.PlayStatus
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import org.json.JSONArray
@@ -57,12 +58,26 @@ class GameLibraryRepository(
                                 TODO edit this to append Source, Genre, Platform of games instead of replacing
                                 */
                                 val highestPlaytime = maxOf(existingGame.playTime, game.playTime)
-                                val newGame = game.copy(id = existingGame.id, playTime = highestPlaytime)
+                                var newGame = game.copy(id = existingGame.id, playTime = highestPlaytime)
+
+                                if (game.status.isEmpty()) {
+                                    newGame = if (game.playTime > 0) {
+                                        game.copy(status = PlayStatus.Played)
+                                    } else {
+                                        game.copy(status = PlayStatus.Unplayed)
+                                    }
+                                }
                                 updateGame(newGame)
                                 Log.i("Game updated!", "{title: ${game.title}, igdbId: ${game.igdbId}, id: ${game.id}}")
                             } else {
+                                // set the basic play status based on playtime
+                                var newGame = if (game.playTime > 0) {
+                                    game.copy(status = PlayStatus.Played)
+                                } else {
+                                    game.copy(status = PlayStatus.Unplayed)
+                                }
                                 // add the new game
-                                insertGame(game)
+                                insertGame(newGame)
                                 Log.i("Game added!", "{title: ${game.title}, igdbId: ${game.igdbId}, id: ${game.id}}")
                             }
                         }

@@ -47,10 +47,15 @@ class SteamDataSource(var userIdFlow: Flow<String>, gameDao: GameDao) : RemoteLi
             var steamGame = gameDao.getGameBySteamId(steamAppID)
             var newPlayTime = (apiGame.get("playtime_forever") as Integer).toLong()
             if (!forceUpdate && steamGame != null) {
-                // update the playtime
-                if (newPlayTime != steamGame.playTime)
-                    emit(steamGame.copy(playTime = newPlayTime))
-                // go
+                // if the platform doesn't have steam, add it
+                var modifiedSteamGame = steamGame.copy(
+                    platform = steamGame.platform.plus("PC"),
+                    source = steamGame.source.plus(libraryName),
+                    playTime = newPlayTime
+                )
+
+                if (modifiedSteamGame != steamGame)
+                    emit(modifiedSteamGame)
                 continue
             }
 
@@ -116,8 +121,8 @@ class SteamDataSource(var userIdFlow: Flow<String>, gameDao: GameDao) : RemoteLi
             }
 
             // Add PC (because it's Steam!)
-            game.platform.plus("PC")
-            game.source.plus(libraryName)
+            game = game.copy(platform = game.platform.plus("PC"))
+            game = game.copy(source = game.source.plus(libraryName))
             // Add features to this in the future perhaps, but otherwise you are done!
             emit(game)
         }
