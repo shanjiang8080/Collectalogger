@@ -17,6 +17,12 @@ class Converters {
 
     @TypeConverter
     fun toMap(data: String): Map<String, Long> = JSONObject(data).toMap() as Map<String, Long>
+
+    @TypeConverter
+    fun fromList(items: List<String>): String = items.joinToString(",")
+
+    @TypeConverter
+    fun toList(data: String): List<String> = if (data == "") listOf() else data.split(",").toList()
 }
 
 // Copied from StackOverflow.

@@ -56,8 +56,6 @@ fun CollectaloggerNavGraph(
             startDestination = Gallery,
             modifier = Modifier.padding(innerPadding)
         ) {
-            // TODO finish this
-
             composable<Gallery> { backStackEntry ->
                 val factory = remember { GalleryViewModelFactory(appContainer) }
                 val galleryViewModel: GalleryViewModel = viewModel(backStackEntry, factory = factory)

@@ -8,12 +8,9 @@ import com.example.collectalogger2.data.datasource.RemoteLibraryDataSource
 import com.example.collectalogger2.util.APIException
 import com.example.collectalogger2.util.APIStatusException
 import com.example.collectalogger2.util.AccountException
-import com.example.collectalogger2.util.IGDBSource
 import com.example.collectalogger2.util.PlayStatus
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import org.json.JSONArray
-import org.json.JSONObject
 
 
 // I should replace the `remoteLibraryDataSource` with a list of them
@@ -58,7 +55,7 @@ class GameLibraryRepository(
                                 TODO edit this to append Source, Genre, Platform of games instead of replacing
                                 */
                                 val highestPlaytime = maxOf(existingGame.playTime, game.playTime)
-                                var newGame = game.copy(id = existingGame.id, playTime = highestPlaytime)
+                                var newGame = game.copy(id = existingGame.id, playTime = highestPlaytime, source = existingGame.source.plus(game.source))
 
                                 if (game.status.isEmpty()) {
                                     newGame = if (game.playTime > 0) {
@@ -104,40 +101,4 @@ class GameLibraryRepository(
         }
     }
 
-    /**
-     * This method calls IGDB and gets extra information like the game background.
-     * It returns the updated Game.
-     * TODO will get more information in the future (like websites)
-     */
-    suspend fun getAuxiliaryInformation(game: Game): Game {
-        var updatedGame = game.copy()
-        var igdbResponse: JSONArray
-        try {
-            igdbResponse = IGDBSource.makeAPICall(
-                "artworks",
-                "fields image_id; where game = ${game.igdbId};"
-            )
-        } catch (ex: Exception) {
-            if (ex is APIException) {
-                Log.e("Connection to IGDB API Proxy failed.", ex.message ?: "")
-            } else {
-                Log.e("IGDB Source failed.", ex.message ?: "")
-            }
-            return game
-        }
-        if (igdbResponse.length() > 0 && (igdbResponse.get(0) as JSONObject).has("image_id")) {
-            var igdbResponseObj = igdbResponse.get(0) as JSONObject
-            var imageId = igdbResponseObj.get("image_id")
-            updatedGame = updatedGame.copy(backgroundUrl = "https://images.igdb.com/igdb/image/upload/t_720p/${imageId}.jpg")
-        } else {
-            Log.w("This game has no artwork!", game.title)
-        }
-
-        // TODO other metadata here
-
-        // after doing this, save the game!
-        updateGame(updatedGame)
-        Log.i("Updated game!", updatedGame.title)
-        return updatedGame
-    }
 }

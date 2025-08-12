@@ -40,5 +40,12 @@ data class Game(
     // and an epicId as well, though it's a string.
     @ColumnInfo(name = "epicId", defaultValue = "")
     val epicId: String = "",
+    // This is for IGDB screenshots, fetched when focused for the first time
+    @ColumnInfo(name = "screenshots", defaultValue = "")
+    val screenshots: List<String> = listOf(),
+    @ColumnInfo(name = "developers", defaultValue = "")
+    val developers: Set<String> = setOf(),
+    @ColumnInfo(name = "publishers", defaultValue = "")
+    val publishers: Set<String> = setOf()
 ) {
 }

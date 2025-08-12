@@ -5,7 +5,6 @@ import com.example.collectalogger2.data.Game
 import com.example.collectalogger2.data.GameDao
 import com.example.collectalogger2.util.AccountException
 import com.example.collectalogger2.util.EpicSource
-import com.example.collectalogger2.util.IGDBSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -28,24 +27,48 @@ class EpicDataSource(
         // sets JSON to the thing
         var userJson = refreshLogin(JSONObject(userInfo))
         // after refreshing JSON if applicable, get the list of all games, then iterate through and emit.
-        /*
-        1. Get assets from the API.
-        2. Get playtime from the API.
-        3. Make a for loop iterating through assets.
-        4. Skip elements where the Playnite implementation skips
-        5. Get IGDB information for each game.
-        6. Create a game, fill it with info, and emit it.
-         */
-        // invoke request with the assets URL and tokens.
-        var assetsResponse = EpicSource.makeAPICall(
-            domain = "launcher-public-service-prod06.ol.epicgames.com",
-            path = "launcher/api/public/assets/Windows?label=Live",
-            isGet = true,
-            headerss = mapOf("Authorization" to "${userJson.get("token_type")} ${userJson.get("access_token")}"),
-            params = mapOf(),
-            bodyParams = mapOf(),
-            isJsonArray = true
-        ) as JSONArray
+
+        // Get the full map of items, where key is slug and value is the playtimes.
+        var igdbCallMap = mutableMapOf<String, Pair<Long, String>>()
+        // This map is for games that don't get caught by the bulk slug thing.
+        var slugNamespaceCatalogItemIdMap = mutableMapOf<String, Pair<String, String>>()
+        // Note that appName from items == artifactId from playtimes
+        var artifactSlugMap = mutableMapOf<String, String>()
+        var cursor = ""
+        do {
+            var params = mapOf(
+                "includeMetadata" to "true",
+                "includeCategories" to "applications",
+            )
+            if (cursor != "") params = params.plus("cursor" to cursor)
+            var itemsResponse = EpicSource.makeAPICall(
+                domain = "library-service.live.use1a.on.epicgames.com",
+                path = "library/api/public/items",
+                isGet = true,
+                headerss = mapOf("Authorization" to "${userJson.get("token_type")} ${userJson.get("access_token")}"),
+                params = params,
+                bodyParams = mapOf(),
+                isJsonArray = false
+            ) as JSONObject
+            // Get metadata and fill/unfill cursor depending on response
+            var metadata = itemsResponse.getJSONObject("responseMetadata")
+            if (metadata.has("nextCursor"))
+                cursor = metadata.getString("nextCursor")
+            else
+                cursor = ""
+            // get the "records" from the object, which is a JSONArray
+            var records = itemsResponse.getJSONArray("records")
+            for (i in 0 until records.length()) {
+                var entry = records.getJSONObject(i)
+                var gameSlug = getSlug(entry.getString("sandboxName"))
+
+                artifactSlugMap[entry.getString("appName")] = gameSlug
+                slugNamespaceCatalogItemIdMap[gameSlug] = entry.getString("namespace") to entry.getString("catalogItemId")
+                // You need a placeholder because if not it won't get imported
+                igdbCallMap[gameSlug] = 0L to convertEpicIdToString(entry.getString("namespace"), entry.getString("catalogItemId"))
+            }
+        } while (cursor != "") // Loop until cursor is gone
+
         // now, invoke request with the playtime URL and tokens.
         var playtimeResponse = EpicSource.makeAPICall(
             domain = "library-service.live.use1a.on.epicgames.com",
@@ -57,53 +80,88 @@ class EpicDataSource(
             isJsonArray = true
         ) as JSONArray
 
-        // make a map of playtimes for efficiency
-        val artifactMap = mutableMapOf<String, JSONObject>()
+        // Get the playtimes and map it to the igdbCallMap
         for (ii in 0 until playtimeResponse.length()) {
-            val obj = playtimeResponse.get(ii) as JSONObject
-            artifactMap[obj.getString("artifactId")] = obj
-        }
-
-        // finally, make a for loop.
-        for (i in 0 until assetsResponse.length()) {
-            val epicGame = assetsResponse.get(i) as JSONObject
-            var newGame = Game()
-            // get playtime
-            // in playtimes, artifact ID lines up with appName
-            val playtimeObj = artifactMap[epicGame.getString("appName")]
-            if (playtimeObj != null) {
-                // since epic playtimes are likely in seconds
-                val newTime = (playtimeObj.get("totalTime") as Integer).toLong() / 60
-                newGame = newGame.copy(playTime = newTime)
-            }
-            // check if the ID is in the database already
-            var epicId = "${epicGame.get("namespace")} ${epicGame.get("catalogItemId")}"
-            var existingGame = gameDao.getGameByEpicId(epicId)
-            if (!forceUpdate && existingGame != null) {
-                var modifiedGame = existingGame.copy(
-                    platform = existingGame.platform.plus("PC"),
-                    source = existingGame.source.plus(libraryName),
-                    playTime = newGame.playTime
-                )
-                // update playtime
-                if (modifiedGame != existingGame)
-                    emit(modifiedGame)
-                // skip all the other stuff
+            val obj = playtimeResponse.getJSONObject(ii)
+            var slug = artifactSlugMap[obj.getString("artifactId")] ?: ""
+            // Check if the game has been added to IGDB already
+            var epicItem = slugNamespaceCatalogItemIdMap[slug]
+            if (epicItem == null)
+            {
                 continue
             }
+            var epicId = "${epicItem.first} ${epicItem.second}"
+            var epicGame = gameDao.getGameByEpicId(epicId)
+            // If already in the database, skip (but update playtime)
+            if (!forceUpdate && epicGame != null) {
+                // Emit the game, updating the playtime
+                var modifiedEpicGame = epicGame.copy(
+                    platform = epicGame.platform.plus("PC"),
+                    playTime = maxOf(epicGame.playTime, obj.getLong("totalTime") / 60)
+                )
 
-            // set the epic ID (which i'm making up)
-            newGame = newGame.copy(epicId = epicId)
+                if (modifiedEpicGame != epicGame)
+                    emit(modifiedEpicGame)
+                continue
+            }
+            // Otherwise, add the callMap
+            igdbCallMap[slug] = obj.getLong("totalTime") / 60 to epicId
 
+        }
+
+        var duplicateSet = mutableSetOf<Long>() // Contains game ids for duplicate handling
+
+        Log.d("EpicDataSource", "Making bulk IGDB call")
+        // Have the igdbCallMap
+        callIGDB(
+            gameIdentifiers = igdbCallMap,
+            identifierName = "game.slug",
+            endpoint = "external_games",
+            gamePrefix = "game.",
+            otherGameFilter = "external_game_source = 26",
+            customField = "slug",
+            customFieldIsGameAttribute = true,
+            gameJSONPath = { json -> return@callIGDB json.getJSONObject("game") }
+        ).forEach { game ->
+            if (game.igdbId !in duplicateSet) {
+                emit(game)
+                var slug = getSlug(game.title)
+                if (slug in slugNamespaceCatalogItemIdMap) {
+                    slugNamespaceCatalogItemIdMap.remove(slug)
+                } else {
+                    Log.d("EpicDataSource", "Slug $slug not removed from slugNamespaceCatalogItemIdMap!")
+                }
+                duplicateSet.add(game.igdbId)
+            }
+        }
+        // Now, there are a few games left that haven't been caught by the response.
+        // Loop through these and use the fallback approach (with Catalog endpoint).
+        // But still, make as few IGDB calls as possible.
+        var leftList = slugNamespaceCatalogItemIdMap.keys.toList()
+        var newMap = mutableMapOf<String, Pair<Long, String>>()
+        var newMapSlugs = mutableMapOf<String, Pair<Long, String>>()
+        for (i in 0 until leftList.size) {
+            var key = leftList[i]
+            var pair = slugNamespaceCatalogItemIdMap[key] as Pair
+            var epicIdString = convertEpicIdToString(pair.first, pair.second)
+            var playtime = igdbCallMap[key]!!.first
+            // Remove the game with the epicIdString from the database, if it exists
+            // Since it has a bad title like "Lemon" or something
+            if (key == "Lemon") {
+                Log.d("EpicDataSource", "what")
+            }
+
+
+            // For each remaining game, make an API call to items.
             var catalogResponseRaw = (EpicSource.makeAPICall(
                 domain = "catalog-public-service-prod06.ol.epicgames.com",
-                path = "catalog/api/shared/namespace/${epicGame.get("namespace")}/bulk/items?id=${epicGame.get("catalogItemId")}&country=US&locale=en-US&includeMainGameDetails=true",
+                path = "catalog/api/shared/namespace/${pair.first}/bulk/items?id=${pair.second}&country=US&locale=en-US&includeMainGameDetails=true",
                 isGet = true,
                 headerss = mapOf("Authorization" to "${userJson.get("token_type")} ${userJson.get("access_token")}"),
                 params = mapOf(),
                 bodyParams = mapOf()
             ) as JSONObject)
-            var catalogResponse = catalogResponseRaw.get("${epicGame.get("catalogItemId")}") as JSONObject
+            var catalogResponse = catalogResponseRaw.get(pair.second) as JSONObject
             // sift out DLCs and such: parse through categories
             var categories = catalogResponse.get("categories") as JSONArray
             var categoriesList = mutableListOf<String>()
@@ -128,111 +186,82 @@ class EpicDataSource(
             }
 
             var sanitizedTitle = catalogResponse.getString("title").replace("\"", "\\\"")
-
-            // make a call to IGDB
-            var igdbResponse: JSONArray = IGDBSource.makeAPICall(
-                "external_games",
-                "fields game, external_game_source; where name = \"${sanitizedTitle}\";"
-            )
-            var igdbId: Long? = null
-            var steamIgdbId: Long? = null
-            // loop through the response to get the ID we want
-            for (iii in 0 until igdbResponse.length()) {
-                val item: JSONObject = igdbResponse.get(iii) as JSONObject
-                if (!item.has("external_game_source")) continue
-                if (item.get("external_game_source") == 26) { // store ID matches, so get it and go home
-                    igdbId = (item.get("game") as Integer).toLong()
-                    break
-                }
-                if (item.get("external_game_source") == 1) {
-                    steamIgdbId = (item.get("game") as Integer).toLong()
-                }
-            }
-            if (igdbId == null && steamIgdbId != null) {
-                Log.i("Game does not have Epic listing, using Steam as a fallback", sanitizedTitle)
-                igdbId = steamIgdbId
-            }
-            else if (igdbId == null && igdbResponse.length() > 0) {
-                Log.i("Game does not have Steam listing, using anything as a fallback", sanitizedTitle)
-                igdbId = ((igdbResponse.get(0) as JSONObject).get("game") as Integer).toLong()
-            }
-            else if (igdbId == null) {
-                // try to use a slug as another fallback
-                var slug = sanitizedTitle
-                    .lowercase()
-                    .replace(" ", "-")
-                    .replace(":", "")
-                    .replace(",", "")
-                    .replace(".", "")
-                    .replace("\"", "")
-                    .replace("'", "")
-                    .replace("™", "")
-                    .replace("®", "")
-                    .replace("–", "-")
-                    .replace("---", "-")
-                    .replace("--", "-") // helps with game of the year editions
-                // make an API call with the slug
-                igdbResponse = IGDBSource.makeAPICall(
-                    "games",
-                    "fields id; where slug = \"$slug\";"
-                )
-                if (igdbResponse.length() > 0) {
-                    Log.i("Fallback to slug!", slug)
-                    igdbId = ((igdbResponse.get(0) as JSONObject).get("id") as Integer).toLong()
-                } else {
-                    Log.w("Still does not match! Skipping for now", slug)
-                    continue
-                }
-
-
-            }
-            // set the igdbId of the game
-            newGame = newGame.copy(igdbId = igdbId)
-            // now, make a second call to IGDB to get the info.
-            igdbResponse = IGDBSource.makeAPICall(
-                "games",
-                "fields summary, name, genres; where id = ${igdbId};"
-            )
-            var igdbResponseObj = igdbResponse.get(0) as JSONObject
-            if (!igdbResponseObj.has("summary") ||
-                !igdbResponseObj.has("name")
-            ) { // Note: Some games don't have genre for whatever reason. Peggle Deluxe doesn't, for example.
-                Log.w("Specific attribute not received from the response:", "$igdbResponse")
-                continue
-            } // Add the info to the Game object
-
-            newGame = newGame.copy(description = igdbResponseObj.get("summary") as String)
-            newGame = newGame.copy(title = igdbResponseObj.get("name") as String)
-            newGame = newGame.copy(sortingName = getSortingName(newGame.title))
-            /*
-            TODO: Genre is not added yet since that'd require looping and also associating
-            IGDB values with strings, which is outside the wheelhouse for now.
-             */
-            // make a third API call for the image ID from which you can construct a URL out of
-            // the endpoint should be "covers"
-            // and the body should be "fields image_id; where game = ${game_id};"
-            // then set the imageURL to "https://images.igdb.com/igdb/image/upload/t_cover_big/${imageID}.jpg"
-            igdbResponse = IGDBSource.makeAPICall(
-                "covers",
-                "fields image_id; where game = ${newGame.igdbId};")
-            igdbResponseObj = igdbResponse.get(0) as JSONObject
-            if (!igdbResponseObj.has("image_id")
-            ) {
-                Log.w("image_id not received from the response. Skipping adding image:", "$igdbResponse")
-            } else {
-                var imageId = igdbResponseObj.get("image_id")
-                newGame = newGame.copy(imageUrl = "https://images.igdb.com/igdb/image/upload/t_cover_big/${imageId}.jpg")
-            }
-
-            // Add PC (because it's Steam!)
-            newGame = newGame.copy(platform = newGame.platform.plus("PC"))
-            newGame = newGame.copy(source = newGame.source.plus(libraryName))
-            // Add features to this in the future perhaps, but otherwise you are done!
-            emit(newGame)
-
-
-
+            var sanitizedSlug = getSlug(catalogResponse.getString("title").replace("\"", ""))
+            newMap[sanitizedTitle] = playtime to epicIdString
+            newMapSlugs[sanitizedSlug] = playtime to epicIdString
         }
+
+
+        // Call again with the newMap
+        // Don't filter libraries this time
+        Log.d("EpicDataSource", "Making bulk IGDB call for fallbacks")
+        callIGDB(
+            gameIdentifiers = newMap,
+            identifierName = "game.name",
+            endpoint = "external_games",
+            gamePrefix = "game.",
+            customField = "name",
+            customFieldIsGameAttribute = true,
+            gameJSONPath = { json -> return@callIGDB json.getJSONObject("game") }
+        ).forEach { game ->
+            if (game.igdbId !in duplicateSet) {
+                emit(game)
+                var title = game.title
+                if (title in newMap) {
+                    newMap.remove(title)
+                    newMapSlugs.remove(getSlug(title))
+                }
+                duplicateSet.add(game.igdbId)
+            }
+        }
+
+
+        // Make a new bulk call for slugs
+
+        Log.d("EpicDataSource", "Making bulk IGDB call for fallbacks with slugs")
+        callIGDB(
+            gameIdentifiers = newMapSlugs,
+            identifierName = "game.slug",
+            endpoint = "external_games",
+            gamePrefix = "game.",
+            customField = "slug",
+            customFieldIsGameAttribute = true,
+            gameJSONPath = { json -> return@callIGDB json.getJSONObject("game") }
+        ).forEach { game ->
+            if (game.igdbId !in duplicateSet) {
+                emit(game)
+                var slug = getSlug(game.title)
+                if (slug in newMap) {
+                    newMapSlugs.remove(slug)
+                }
+                duplicateSet.add(game.igdbId)
+            }
+        }
+
+
+        // Stop it there (for now, add more in the future probably)
+        // But then log the remaining items
+
+        newMapSlugs.forEach { what ->
+            Log.w("EpicDataSource", "Not imported: $what")
+        }
+
+
+
+    }
+    private fun convertEpicIdToString(namespace: String, catalogItemId: String): String {
+        return "$namespace $catalogItemId"
+    }
+
+    override fun addToSourceLibrary(
+        game: Game,
+        localId: String
+    ): Game {
+        if (localId == "") {
+            Log.w("EpicDataSource", "localId is null! What the fuck!")
+            throw Exception()
+        }
+        return game.copy(epicId = localId)
     }
 
     /**
@@ -269,4 +298,30 @@ class EpicDataSource(
         userInfoSetter(newJson.toString())
         return newJson
     }
+}
+
+private fun getSlug(name: String): String {
+    var newName = name
+        .lowercase()
+        .replace(" ", "-")
+        .replace(":", "")
+        .replace(",", "")
+        .replace(".", "")
+        .replace("\"", "")
+        .replace("'", "")
+        .replace("’", "")
+        .replace("‘", "")
+        .replace("“", "")
+        .replace("”", "")
+        .replace("™", "")
+        .replace("®", "")
+        .replace("!", "")
+        .replace("_", "-")
+        .replace("–", "-")
+        .replace(">", "")
+        .replace("<", "")
+        .replace("---", "-")
+        .replace("--", "-") // helps with game of the year editions
+    if (newName.endsWith("_")) newName = newName.substring(0, newName.length - 1)
+    return newName
 }

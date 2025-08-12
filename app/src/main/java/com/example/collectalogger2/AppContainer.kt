@@ -42,7 +42,6 @@ class AppDataContainer(private val context: Context) : AppContainer {
                     userInfoFlow = settingsRepository.epicIdInfo,
                     userInfoSetter = {str -> settingsRepository.saveEpicIdInfo(str) },
                     gameDao = gameDao)),
-            // Also, TODO create a DAO for platform (e.g: Steam) user IDs
             localDataSource = LocalDataSource(),
             gameDao = gameDao
         )

@@ -22,16 +22,9 @@ class DetailViewModel(val container: AppContainer, savedStateHandle: SavedStateH
     init {
         viewModelScope.launch(Dispatchers.IO) {
             _game.value = container.gameLibraryRepository.getGameById(gameId)
-            // make an API call if missing elements.
-            if (game.value?.backgroundUrl == "") { // TODO add this functionality
-                updateGame()
-            }
         }
     }
 
-    suspend fun updateGame() {
-        _game.value = container.gameLibraryRepository.getAuxiliaryInformation(game.value as Game)
-    }
 
     fun setDialog(newValue: String) {
         _currentDialog.value = newValue

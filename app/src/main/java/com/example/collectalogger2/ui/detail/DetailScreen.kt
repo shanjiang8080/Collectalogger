@@ -1,6 +1,7 @@
 package com.example.collectalogger2.ui.detail
 
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -35,6 +37,8 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
+import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,7 +65,6 @@ import com.example.collectalogger2.data.Game
 import com.example.collectalogger2.util.PlayStatus
 import kotlin.math.floor
 
-// TODO add a back button at the top left corner
 @Composable
 fun DetailScreen(
     viewModel: DetailViewModel,
@@ -72,10 +75,10 @@ fun DetailScreen(
     val realGame by viewModel.game.collectAsStateWithLifecycle()
     val currentDialog by viewModel.currentDialog.collectAsStateWithLifecycle()
 
-    realGame?.let {
+    if (realGame != null) {
         DetailScreenBody(realGame!!, onNavigateBack, currentDialog, {it -> viewModel.setDialog(it) }, onEditPlayStatus)
-    } ?: run {
-        // TODO add a loading bar or something.
+    } else {
+        Log.i("DetailScreen", "Game is null!")
     }
 
 }
@@ -186,7 +189,13 @@ fun DetailScreenBody(
                     }
 
                 }
+                // Add owned libraries
+
+                PlatformsOwnedBar(game)
+
                 // TODO add genres here
+
+
                 Column(
                 ) {
                     Text(
@@ -200,8 +209,16 @@ fun DetailScreenBody(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
-                // TODO add images carousel here
-
+                // Add the carousel for screenshots
+                Column(
+                ) {
+                    Text(
+                        text = "Images",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    ScreenshotCarousel(game)
+                }
 
             }
 
@@ -216,6 +233,81 @@ fun DetailScreenBody(
 
     }
 }
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun ScreenshotCarousel(game: Game) {
+    Log.d("ScreenshotCarousel", "Screenshots is ${game.screenshots}, size is ${game.screenshots.size}")
+    if (game.screenshots.isNotEmpty()) {
+        HorizontalMultiBrowseCarousel(
+            state = rememberCarouselState { game.screenshots.size },
+            preferredItemWidth = 186.dp, // Copied from example
+            itemSpacing = 8.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()
+                .padding(top = 16.dp, bottom = 16.dp)
+        ) { i ->
+            val item = game.screenshots[i]
+            AsyncImage(
+                model = item,
+                contentDescription = "Screenshot $i of ${game.title}",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .height(205.dp)
+                    .maskClip(MaterialTheme.shapes.large)
+            )
+
+        }
+    }
+}
+
+@Composable
+fun PlatformsOwnedBar(game: Game) {
+    if (game.steamId != -1L || game.epicId != "") { // Add more later
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
+            ),
+        ) {
+            Column(
+                modifier = Modifier.padding(10.dp, 7.dp, 10.dp, 10.dp),
+                verticalArrangement = Arrangement.Top
+            ) {
+                Text(
+                    text = "Owned on",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 4.dp)
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    if (game.steamId != -1L) {
+                        // Display a Steam icon
+                        Icon(
+                            painter = painterResource(id = R.drawable.logo_steam),
+                            contentDescription = "Steam logo",
+                            modifier = Modifier.height(24.dp),
+                            tint = MaterialTheme.colorScheme.secondary,
+                        )
+                    }
+                    if (game.epicId != "") {
+                        // Display an Epic icon
+                        Icon(
+                            painter = painterResource(id = R.drawable.logo_egs),
+                            contentDescription = "Epic logo",
+                            modifier = Modifier.height(24.dp),
+                            tint = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                }
+
+            }
+        }
+    }
+}
+
 
 @Preview
 @Composable
@@ -406,7 +498,9 @@ fun DetailScreenPreview() {
         status = PlayStatus.Beaten,
         imageUrl = "",
         backgroundUrl = "",
-        playTime = 22255
+        playTime = 22255,
+        steamId = 2L,
+        epicId = "a"
     )
     DetailScreenBody(
         game = game,
