@@ -47,7 +47,8 @@ abstract class RemoteLibraryDataSource(val gameDao: GameDao) {
      * endpoint: an endpoint for IGDB. can be games, websites, etc
      * gamePrefix: a prefix depending on the endpoint. MUST END WITH A PERIOD IF NOT BLANK
      * (Ex: For Steam it'd be URL)
-     * customField
+     * customField: the custom field to get the games out of the map
+     * includeUpdates: if the response should get updates and various other stuffs
      * gameJSONPath: A lambda returning the relevant object from the initial response.
      * platform: a string telling the platform it is. Default is PC.
      */
@@ -60,9 +61,17 @@ abstract class RemoteLibraryDataSource(val gameDao: GameDao) {
         customFieldIsGameAttribute: Boolean = false,
         otherGameFilter: String = "",
         gameJSONPath: (json: JSONObject) -> JSONObject,
+        includeUpdates: Boolean = false,
         platform: String = "PC"): List<Game> {
         var gameList = mutableListOf<Game>()
         bulkCall(gameIdentifiers, 500) { gamesSnippet ->
+            var updateParam = if (includeUpdates) {
+                if (endpoint != "games") "& game.game_type != (1, 5, 13, 2)"
+                else "& game_type != (1, 5, 13, 2)"
+            } else {
+                if (endpoint != "games") "& game.parent_game = null"
+                else "& parent_game = null"
+            }
             var request =
                 """
                     fields
@@ -79,8 +88,7 @@ abstract class RemoteLibraryDataSource(val gameDao: GameDao) {
                     ${gamePrefix}involved_companies.developer, 
                     ${gamePrefix}involved_companies.publisher, 
                     ${gamePrefix}cover.image_id;
-                    where $identifierName = (${gamesSnippet.keys.joinToString(separator = ",") { "\"$it\""}})${if (endpoint != "games") "" +
-                        "& game.game_type != (1, 5, 13, 2)" else ""}
+                    where $identifierName = (${gamesSnippet.keys.joinToString(separator = ",") { "\"$it\""}}) $updateParam
                     ${if (!otherGameFilter.isEmpty()) "& $otherGameFilter" else ""};
                     limit 500;
                 """.trimIndent()
@@ -131,12 +139,21 @@ abstract class RemoteLibraryDataSource(val gameDao: GameDao) {
                 var screenshots = if (igdbResponseObj.has("screenshots")) igdbResponseObj.get("screenshots") as JSONArray else null
                 var involvedCompanies = if (igdbResponseObj.has("involved_companies")) igdbResponseObj.get("involved_companies") as JSONArray else null
 
-
                 // get screenshots
                 var screenshotList: MutableList<String> = mutableListOf()
                 for (i in 0 until minOf(screenshots?.length() ?: 0, 5)) {
                     var screenshot = screenshots!![i] as JSONObject
                     screenshotList.add("https://images.igdb.com/igdb/image/upload/t_720p/${screenshot.get("image_id")}.jpg")
+                }
+
+                // get genres
+                var genreList = if (igdbResponseObj.has("genres")) igdbResponseObj.getJSONArray("genres") else null
+                var genres: MutableSet<String> = mutableSetOf()
+                if (genreList != null) {
+                    for (i in 0 until genreList.length()) {
+                        var genre = genreList[i] as JSONObject
+                        if (genre.has("name")) genres.add(genre.getString("name"))
+                    }
                 }
 
                 // get the developers/publishers
@@ -162,6 +179,7 @@ abstract class RemoteLibraryDataSource(val gameDao: GameDao) {
                     igdbId = igdbId,
                     backgroundUrl = if (artworks != null && artworks.length() > 0) "https://images.igdb.com/igdb/image/upload/t_720p/${(artworks[0] as JSONObject).getString("image_id")}.jpg" else "",
                     screenshots = screenshotList,
+                    genre = genres,
                     developers = developers.toSet(),
                     publishers = publishers.toSet()
                 )

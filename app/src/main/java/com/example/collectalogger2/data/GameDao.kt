@@ -17,28 +17,37 @@ interface GameDao {
     @Delete
     suspend fun delete(game: Game)
 
-    @Query("SELECT * from games WHERE id = :id")
+    @Query("SELECT * FROM games WHERE id = :id")
     fun getGame(id: Long): Game?
 
-    @Query("SELECT * from games WHERE id = :id")
+    @Query("SELECT * FROM games WHERE id = :id")
     fun getGameStream(id: Long): Flow<Game?>
 
 
-    @Query("SELECT * from games WHERE igdbId = :igdbId")
+    @Query("SELECT * FROM games WHERE igdbId = :igdbId")
     fun getGameByIGDBId(igdbId: Long): Game?
 
-    @Query("SELECT * from games WHERE steamId = :steamId")
+    @Query("SELECT * FROM games WHERE steamId = :steamId")
     fun getGameBySteamId(steamId: Long): Game?
 
-    @Query("SELECT * from games WHERE epicId = :epicId")
+    @Query("SELECT * FROM games WHERE epicId = :epicId")
     fun getGameByEpicId(epicId: String): Game?
 
-    @Query("SELECT * from games WHERE igdbId = :igdbId")
+    @Query("SELECT * FROM games WHERE igdbId = :igdbId")
     fun getGameStreamByIGDBId(igdbId: Long): Flow<Game?>
 
-    @Query("SELECT * from games ORDER BY sortingName ASC")
+    @Query("SELECT * FROM games ORDER BY sortingName ASC")
     fun getAllGames(): List<Game>
 
-    @Query("SELECT * from games ORDER BY sortingName ASC")
+    @Query("SELECT * FROM games WHERE isFavorite = 1")
+    fun getFavoriteGames(): List<Game>
+
+    @Query("SELECT * FROM games ORDER BY sortingName ASC")
     fun getAllGamesStream(): Flow<List<Game>>
+    
+    @Query("SELECT * FROM games WHERE LOWER(title) LIKE '%' || LOWER(:search) || '%' LIMIT :maxResults")
+    fun getGamesSearchLimited(search: String, maxResults: Int): List<Game>
+
+    @Query("SELECT * FROM games WHERE LOWER(title) LIKE '%' || LOWER(:search) || '%'")
+    fun getGamesSearch(search: String): List<Game>
 }

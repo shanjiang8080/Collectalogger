@@ -1,6 +1,7 @@
 package com.example.collectalogger2.ui.detail
 
 import android.os.Bundle
+import android.util.Log
 import androidx.lifecycle.AbstractSavedStateViewModelFactory
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -34,6 +35,13 @@ class DetailViewModel(val container: AppContainer, savedStateHandle: SavedStateH
         viewModelScope.launch(Dispatchers.IO) {
             _game.value = _game.value!!.copy(status = newStatus)
             container.gameLibraryRepository.updateGame(_game.value!!)
+        }
+    }
+    fun toggleFavoriteGame() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _game.value = _game.value!!.copy(isFavorite = !_game.value!!.isFavorite)
+            container.gameLibraryRepository.updateGame(_game.value!!)
+            Log.i("DetailViewModel", "${_game.value!!.title} is now ${if (_game.value!!.isFavorite) "" else "un"}favorited.")
         }
     }
 

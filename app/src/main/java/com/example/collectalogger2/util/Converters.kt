@@ -10,7 +10,7 @@ class Converters {
     fun fromSet(items: Set<String>): String = items.joinToString(",")
 
     @TypeConverter
-    fun toSet(data: String): Set<String> = data.split(",").toSet()
+    fun toSet(data: String): Set<String> = if (data == "") setOf() else data.split(",").toSet()
 
     @TypeConverter
     fun fromMap(map: Map<String, Long>): String = JSONObject(map).toString()

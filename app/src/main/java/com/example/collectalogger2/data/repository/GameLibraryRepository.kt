@@ -37,6 +37,12 @@ class GameLibraryRepository(
 
     suspend fun updateGame(game: Game) = gameDao.update(game)
 
+    fun getGamesBySearchTerm(search: String, limit: Int = 0): List<Game> =
+        if (limit != 0)
+            gameDao.getGamesSearchLimited(search, limit)
+        else
+            gameDao.getGamesSearch(search)
+
     suspend fun updateGameLibraries() {
         for (dataSource in remoteLibraryDataSources) {
             var retriesLeft = 3

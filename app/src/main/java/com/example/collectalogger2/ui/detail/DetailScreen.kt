@@ -9,8 +9,11 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -25,6 +28,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -35,6 +40,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
@@ -47,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -76,14 +85,19 @@ fun DetailScreen(
     val currentDialog by viewModel.currentDialog.collectAsStateWithLifecycle()
 
     if (realGame != null) {
-        DetailScreenBody(realGame!!, onNavigateBack, currentDialog, {it -> viewModel.setDialog(it) }, onEditPlayStatus)
-    } else {
-        Log.i("DetailScreen", "Game is null!")
+        DetailScreenBody(
+            realGame!!,
+            onNavigateBack,
+            currentDialog,
+            { it -> viewModel.setDialog(it) },
+            onEditPlayStatus,
+            { viewModel.toggleFavoriteGame() }
+        )
     }
 
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @SuppressLint("DefaultLocale")
 @Composable
 fun DetailScreenBody(
@@ -91,7 +105,8 @@ fun DetailScreenBody(
     onNavigateBack: () -> Unit,
     currentDialog: String,
     setDialog: (String) -> Unit,
-    onEditPlayStatus: (String) -> Unit
+    onEditPlayStatus: (String) -> Unit,
+    toggleFavorite: () -> Unit
 ) {
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
@@ -114,6 +129,13 @@ fun DetailScreenBody(
                     top = 0.dp,
                     bottom = 0.dp
                 ),
+                actions = {
+                    Row(
+                        modifier = Modifier.padding(10.dp)
+                    ) {
+                        FavoriteIcon(game, toggleFavorite)
+                    }
+                }
                 )
         },
         modifier = Modifier
@@ -124,100 +146,161 @@ fun DetailScreenBody(
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
         ) {
-            BackgroundImage(screenHeight, game)
-
-            Column(
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier
-                    .padding(10.dp)
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainer
             ) {
-                Row(
-                    verticalAlignment = Alignment.Bottom
-                ) {
-                    CoverArt(game, screenWidth, Modifier
-                        .padding(top = screenHeight / 11, start = 15.dp)
-                        .wrapContentSize(unbounded = true, align = Alignment.TopStart)
-                    )
+                BackgroundImage(screenHeight, game)
 
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        ),
+                Column(
+                ) {
+                    // Contains things at the top (so, not description/images)
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
                         modifier = Modifier
-                            .padding(top = 65.dp)
+                            .padding(10.dp)
                     ) {
-                        Text(
-                            text = game.title,
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.Medium,
-                            textAlign = TextAlign.Center,
+                        // Cover art / title block
+                        Row(
+                            verticalAlignment = Alignment.Bottom,
+                        ) {
+                            CoverArt(game, screenWidth, Modifier
+                                .padding(top = screenHeight / 11, start = 15.dp)
+                                .wrapContentSize(unbounded = true, align = Alignment.TopStart)
+                            )
+
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                                ),
+                                modifier = Modifier
+                                    .padding(top = 65.dp)
+                            ) {
+                                Text(
+                                    text = game.title,
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = FontWeight.Medium,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier
+                                        .padding(10.dp)
+                                )
+
+
+                            }
+
+                        }
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .padding(5.dp)
+                                .fillMaxWidth()
+                        ) {
+                            // For now, just a block with developers and publishers
+                            // Later TODO have each developer/publisher clickable and it will show a filter
+                            // on the gallery.
+                            // For developers
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                game.developers.forEach { developer ->
+                                    SuggestionChip(
+                                        onClick = {}, // TODO Add a gallery filter link
+                                        label = { Text(
+                                            text = developer,
+                                            color = MaterialTheme.colorScheme.primary
+                                        ) }
+                                    )
+                                }
+                            }
+                            // For publishers
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                game.publishers.forEach { publisher ->
+                                    SuggestionChip(
+                                        onClick = {}, // TODO Add a gallery filter link
+                                        label = { Text(
+                                            text = publisher,
+                                            color = MaterialTheme.colorScheme.primary
+                                        ) }
+                                    )
+                                }
+                            }
+                        }
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            // Card containing hours/play status
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                                )
+                            ) {
+                                Row(
+                                    horizontalArrangement = Arrangement.SpaceAround,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                ) {
+                                    LabelIconCombo(
+                                        iconPainter = painterResource(R.drawable.mic_schedule),
+                                        iconDescription = "Time played icon",
+                                        textLabel = "Time Played",
+                                        textValue = if (game.playTime > 0) "${String.format("%.1f",game.playTime / 60f)} hours" else "Unplayed",
+                                        textAction = { setDialog("TimePlayed") }
+                                    )
+                                    LabelIconCombo(
+                                        iconPainter = choosePlayStatusIcon(game),
+                                        iconDescription = "Play status icon",
+                                        textLabel = "Play Status",
+                                        textValue = if (!game.status.isEmpty()) game.status else PlayStatus.Unplayed,
+                                        textAction = { setDialog("PlayStatus") }
+                                    )
+                                }
+
+                            }
+                            // Add owned libraries
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                // Display platforms owned and genre
+                                PlatformsOwnedBar(game)
+                                GenreCard(game)
+
+                            }
+
+                        }
+
+
+
+                    }
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface
+                    ) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
                             modifier = Modifier
                                 .padding(10.dp)
-                        )
+                        ) {
+                            Column(
+                            ) {
+                                TextLabel("Description")
+                                Text(
+                                    text = game.description,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            // Add the carousel for screenshots
+                            Column(
+                            ) {
+                                TextLabel("Images")
+                                ScreenshotCarousel(game)
+                            }
 
+                        }
 
                     }
-
-                }
-                // TODO put developer(s)/publisher(s) once that works out 
-                // Card containing hours/play status
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer
-                    )
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.SpaceAround,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                    ) {
-                        LabelIconCombo(
-                            iconPainter = painterResource(R.drawable.mic_schedule),
-                            iconDescription = "Time played icon",
-                            textLabel = "Time Played",
-                            textValue = if (game.playTime > 0) "${String.format("%.1f",game.playTime / 60f)} hours" else "Unplayed",
-                            textAction = { setDialog("TimePlayed") }
-                        )
-                        LabelIconCombo(
-                            iconPainter = choosePlayStatusIcon(game),
-                            iconDescription = "Play status icon",
-                            textLabel = "Play Status",
-                            textValue = if (!game.status.isEmpty()) game.status else PlayStatus.Unplayed,
-                            textAction = { setDialog("PlayStatus") }
-                        )
-                    }
-
-                }
-                // Add owned libraries
-
-                PlatformsOwnedBar(game)
-
-                // TODO add genres here
-
-
-                Column(
-                ) {
-                    Text(
-                        text = "Description",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = game.description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                // Add the carousel for screenshots
-                Column(
-                ) {
-                    Text(
-                        text = "Images",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    ScreenshotCarousel(game)
                 }
 
             }
@@ -232,6 +315,82 @@ fun DetailScreenBody(
         }
 
     }
+}
+
+@Composable
+fun FavoriteIcon(game: Game, toggleFavorite: () -> Unit) {
+    IconButton(onClick = toggleFavorite) {
+        if (game.isFavorite) {
+            Icon(
+                imageVector = Icons.Filled.Favorite,
+                tint = MaterialTheme.colorScheme.primary,
+                contentDescription = "Favorite button (filled)"
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Filled.FavoriteBorder,
+                tint = MaterialTheme.colorScheme.onSurface,
+                contentDescription = "Favorite button (unfilled)"
+            )
+        }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalLayoutApi::class)
+private fun GenreCard(game: Game) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        ),
+    ) {
+        Column(
+            verticalArrangement = Arrangement.Top,
+            modifier = Modifier
+                .padding(10.dp, 7.dp, 10.dp, 10.dp)
+                .fillMaxWidth()
+
+        ) {
+            // Label
+            TextLabel(
+                text = "Genres",
+                color = MaterialTheme.colorScheme.secondary
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                verticalArrangement = Arrangement.spacedBy((-10).dp)
+            ) {
+                game.genre.forEach { genre ->
+                    SuggestionChip(
+                        onClick = {}, // TODO Add a gallery filter link
+                        label = {
+                            Text(
+                                text = genre,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+                        },
+                        border = SuggestionChipDefaults.suggestionChipBorder(false)
+                    )
+
+                }
+            }
+        }
+
+    }
+}
+
+@Composable
+private fun TextLabel(
+    text: String,
+    color: Color = MaterialTheme.colorScheme.onSurface,
+    modifier: Modifier = Modifier
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        color = color,
+        modifier = modifier
+    )
 }
 
 @Composable
@@ -262,26 +421,30 @@ private fun ScreenshotCarousel(game: Game) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PlatformsOwnedBar(game: Game) {
     if (game.steamId != -1L || game.epicId != "") { // Add more later
         Card(
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
+                containerColor = MaterialTheme.colorScheme.secondaryContainer
             ),
+            modifier = Modifier
+                .fillMaxHeight()
         ) {
             Column(
-                modifier = Modifier.padding(10.dp, 7.dp, 10.dp, 10.dp),
-                verticalArrangement = Arrangement.Top
+                verticalArrangement = Arrangement.Top,
+                modifier = Modifier
+                    .padding(10.dp, 7.dp, 10.dp, 10.dp)
             ) {
-                Text(
+                TextLabel(
                     text = "Owned on",
-                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 4.dp)
                 )
-                Row(
+                FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    maxItemsInEachRow = 2
                 ) {
                     if (game.steamId != -1L) {
                         // Display a Steam icon
@@ -500,14 +663,18 @@ fun DetailScreenPreview() {
         backgroundUrl = "",
         playTime = 22255,
         steamId = 2L,
-        epicId = "a"
+        epicId = "a",
+        developers = setOf("ConcernedApe"),
+        publishers = setOf("Chucklefish", "ConcernedApe"),
+        genre = setOf("Role-playing", "Simulator", "Strategy", "Adventure", "Indie")
     )
     DetailScreenBody(
         game = game,
         onNavigateBack = {},
         currentDialog = "",
         setDialog = {},
-        onEditPlayStatus = {})
+        onEditPlayStatus = {},
+        toggleFavorite = {})
 }
 
 @Composable
@@ -557,11 +724,7 @@ fun LabelIconCombo(
             tint = MaterialTheme.colorScheme.secondary
         )
         Column {
-            Text(
-                text = textLabel,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.secondary
-            )
+            TextLabel(text = textLabel, color = MaterialTheme.colorScheme.secondary)
             Text(
                 text = textValue,
                 style = MaterialTheme.typography.titleSmall,
