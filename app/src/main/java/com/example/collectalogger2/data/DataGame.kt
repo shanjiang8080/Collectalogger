@@ -21,8 +21,8 @@ data class Game(
     // The platform the user has the game on (PC, PS5, Switch, etc).
     // Later on, I'll add non-PC sources that will affect this.
     val platform: Set<String> = setOf(),
-    // The genre, as provided by IGDB.
-    val genre: Set<String> = setOf(),
+    // The IGDB genre id.
+    val genre: Set<Int> = setOf(),
     // The game libraries (can be multiple) that it is part of.
     val source: Set<String> = setOf(),
     // Play status (set manually)

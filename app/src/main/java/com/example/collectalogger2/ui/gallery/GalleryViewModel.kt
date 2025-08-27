@@ -1,11 +1,15 @@
 package com.example.collectalogger2.ui.gallery
 
+import android.os.Bundle
 import android.util.Log
+import androidx.lifecycle.AbstractSavedStateViewModelFactory
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.savedstate.SavedStateRegistryOwner
 import com.example.collectalogger2.AppContainer
 import com.example.collectalogger2.data.Game
+import com.example.collectalogger2.data.Genre
 import com.example.collectalogger2.util.Filter
 import com.example.collectalogger2.util.Sort
 import com.example.collectalogger2.util.SortBy
@@ -18,11 +22,11 @@ import kotlinx.coroutines.launch
 
 data class GalleryUiState(
     val sort: Sort? = Sort(SortBy.RELEASED, false), // TODO Sort is not implemented
-    val filter: Filter? = null, // TODO Filter is not implemented
+    val filter: Filter? = null,
     val games: List<Game> = emptyList()
 )
 
-class GalleryViewModel(container: AppContainer) : ViewModel() {
+class GalleryViewModel(container: AppContainer, savedStateHandle: SavedStateHandle) : ViewModel() {
     // like, for example, Steam account ID
     var repository = container.gameLibraryRepository
 
@@ -32,19 +36,42 @@ class GalleryViewModel(container: AppContainer) : ViewModel() {
     private var _uiState = MutableStateFlow(GalleryUiState())
     val uiState: StateFlow<GalleryUiState> = _uiState.asStateFlow()
 
+    private val _allGameGenres = MutableStateFlow<List<Genre>>(emptyList())
+    val allGameGenres = _allGameGenres.asStateFlow()
 
+    private fun <T> getList(
+        savedStateHandle: SavedStateHandle,
+        key: String
+    ): List<T>? {
+        return savedStateHandle.get<T?>(key)?.let { listOf(it) }
+    }
 
     init {
-        // get cached data, if available
-        if (!cachedGames.value.isEmpty()) {
-            _uiState.update { it.copy(games = cachedGames.value) }
-            Log.i("GalleryViewModel", "Getting games from cache")
-        } else {
-            viewModelScope.launch(Dispatchers.IO) {
-                val gamesFromDb = repository.getAllGames()
-                _cachedGames.value = gamesFromDb
-                Log.i("GalleryViewModel", "Getting games from DB")
-                _uiState.update { it.copy(games = gamesFromDb) }
+        // prepare filter
+        // TODO in the future, for genre, developer, publisher, library, platform, split based on commas.
+        val filter = Filter(
+            library = getList(savedStateHandle, "library"),
+            platform = getList(savedStateHandle, "platform"),
+            genre = getList(savedStateHandle, "genre"),
+            developer = getList(savedStateHandle, "developer"),
+            publisher = getList(savedStateHandle, "publisher"),
+            isFavorite = savedStateHandle.get<Boolean?>("isFavorite")
+        )
+
+        viewModelScope.launch(Dispatchers.IO) {
+            container.gameLibraryRepository.getAllGamesStream().collect { games ->
+                _cachedGames.value = games
+                _uiState.update {
+                    it.copy(
+                        games = _cachedGames.value,
+                        filter = filter
+                    )
+                }
+            }
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            container.gameLibraryRepository.genreFlow.collect { genres ->
+                _allGameGenres.value = genres
             }
         }
     }
@@ -106,10 +133,17 @@ class GalleryViewModel(container: AppContainer) : ViewModel() {
     }
 }
 
+@Suppress("UNCHECKED_CAST")
 class GalleryViewModelFactory(
-    private val container: AppContainer
-    ) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return GalleryViewModel(container) as T
+    private val container: AppContainer,
+    owner: SavedStateRegistryOwner,
+    defaultArgs: Bundle? = null
+) : AbstractSavedStateViewModelFactory(owner, defaultArgs) {
+    override fun <T : ViewModel> create(
+        key: String,
+        modelClass: Class<T>,
+        handle: SavedStateHandle
+    ): T {
+        return GalleryViewModel(container, handle) as T
     }
 }

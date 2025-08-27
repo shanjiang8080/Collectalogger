@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.savedstate.SavedStateRegistryOwner
 import com.example.collectalogger2.AppContainer
 import com.example.collectalogger2.data.Game
+import com.example.collectalogger2.data.Genre
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,11 +19,31 @@ class DetailViewModel(val container: AppContainer, savedStateHandle: SavedStateH
     private val _game = MutableStateFlow<Game?>(null)
     private val _currentDialog = MutableStateFlow<String>("")
     val game = _game.asStateFlow()
+    private val _gameGenres = MutableStateFlow<List<Genre>>(emptyList())
+    val gameGenres = _gameGenres.asStateFlow()
+
+    private val _allGameGenres = MutableStateFlow<List<Genre>>(emptyList())
+    val allGameGenres = _allGameGenres.asStateFlow()
     val currentDialog = _currentDialog.asStateFlow()
     val gameId: Long = checkNotNull(savedStateHandle["id"])
     init {
         viewModelScope.launch(Dispatchers.IO) {
-            _game.value = container.gameLibraryRepository.getGameById(gameId)
+            container.gameLibraryRepository.getGameStream(gameId).collect { flowGame: Game? ->
+                if (flowGame != null) {
+                    _game.value = flowGame
+                    var newGenres = mutableListOf<Genre>()
+                    flowGame.genre.forEach { genreId ->
+                        var genre = container.gameLibraryRepository.getGenreByIGDBId(genreId)
+                        if (genre != null) newGenres.add(genre)
+                    }
+                    _gameGenres.value = newGenres.toList()
+                }
+            }
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            container.gameLibraryRepository.genreFlow.collect { genres ->
+                _allGameGenres.value = genres
+            }
         }
     }
 
@@ -33,17 +54,45 @@ class DetailViewModel(val container: AppContainer, savedStateHandle: SavedStateH
 
     fun editPlayStatus(newStatus: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            _game.value = _game.value!!.copy(status = newStatus)
-            container.gameLibraryRepository.updateGame(_game.value!!)
+            container.gameLibraryRepository.updateGame(_game.value!!.copy(status = newStatus))
         }
     }
+
     fun toggleFavoriteGame() {
         viewModelScope.launch(Dispatchers.IO) {
-            _game.value = _game.value!!.copy(isFavorite = !_game.value!!.isFavorite)
-            container.gameLibraryRepository.updateGame(_game.value!!)
+            container.gameLibraryRepository.updateGame(_game.value!!.copy(isFavorite = !_game.value!!.isFavorite))
             Log.i("DetailViewModel", "${_game.value!!.title} is now ${if (_game.value!!.isFavorite) "" else "un"}favorited.")
         }
     }
+
+    fun onSubmitChanges(
+        title: String,
+        sortingName: String,
+        description: String,
+        developers: Set<String>,
+        publishers: Set<String>,
+        genres: List<Genre>
+    ) {
+        var newGenres = mutableListOf<Int>()
+        genres.forEach { genre ->
+            newGenres.add(genre.igdbId)
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            container.gameLibraryRepository.updateGame(
+                _game.value!!.copy(
+                    title = title,
+                    sortingName = sortingName,
+                    description = description,
+                    // for developers/publishers, remove empty strings
+                    developers = developers.minus(""),
+                    publishers = publishers.minus(""),
+                    genre = newGenres.toSet()
+                )
+            )
+        }
+    }
+
 
 }
 

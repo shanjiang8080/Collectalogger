@@ -1,8 +1,6 @@
 package com.example.collectalogger2.util
 
 import androidx.room.TypeConverter
-import org.json.JSONObject
-import org.json.JSONArray
 
 
 class Converters {
@@ -13,10 +11,17 @@ class Converters {
     fun toSet(data: String): Set<String> = if (data == "") setOf() else data.split(",").toSet()
 
     @TypeConverter
-    fun fromMap(map: Map<String, Long>): String = JSONObject(map).toString()
+    fun fromGenres(set: Set<Int>): String = set.joinToString(",")
 
     @TypeConverter
-    fun toMap(data: String): Map<String, Long> = JSONObject(data).toMap() as Map<String, Long>
+    fun toGenres(data: String): Set<Int> {
+        var genreSet: MutableSet<Int> = mutableSetOf()
+        data.split(",").forEach { genreId ->
+            if (genreId.isNotEmpty())
+                genreSet.add(genreId.toInt())
+        }
+        return genreSet.toSet()
+    }
 
     @TypeConverter
     fun fromList(items: List<String>): String = items.joinToString(",")
@@ -25,18 +30,3 @@ class Converters {
     fun toList(data: String): List<String> = if (data == "") listOf() else data.split(",").toList()
 }
 
-// Copied from StackOverflow.
-// https://stackoverflow.com/a/64002903
-fun JSONObject.toMap(): Map<String, *> = keys().asSequence().associateWith {
-    when (val value = this[it])
-    {
-        is JSONArray ->
-        {
-            val map = (0 until value.length()).associate { Pair(it.toString(), value[it]) }
-            JSONObject(map).toMap().values.toList()
-        }
-        is JSONObject -> value.toMap()
-        JSONObject.NULL -> null
-        else            -> value
-    }
-}

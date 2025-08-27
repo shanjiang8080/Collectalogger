@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
@@ -23,20 +24,28 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -51,6 +60,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.example.collectalogger2.R
 import com.example.collectalogger2.data.Game
+import com.example.collectalogger2.data.Genre
+import com.example.collectalogger2.util.Filter
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -64,6 +75,7 @@ fun GalleryScreen(
     val listState = rememberSaveable(saver = LazyGridState.Saver) {
         LazyGridState()
     }
+    val allGenres by viewModel.allGameGenres.collectAsStateWithLifecycle()
     // eventually, the uiState can be changed by filters.
     // not now, though.
     GalleryScreenBody(
@@ -71,12 +83,15 @@ fun GalleryScreen(
         textFieldState = textFieldState,
         listState = listState,
         uiState = uiState,
+        allGenres = allGenres,
+        onUpdateFilter = { viewModel.updateFilter(it) },
         onNavigateToDetail = onNavigateToDetail,
         getSearchedGamesList = {it -> viewModel.getSearchedGamesList(it) },
         onSearch = {it -> viewModel.getSearchedGames(it) }
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun GalleryScreenBody(
@@ -84,10 +99,21 @@ fun GalleryScreenBody(
     listState: LazyGridState,
     textFieldState: TextFieldState,
     uiState: GalleryUiState,
+    onUpdateFilter: (Filter) -> Unit,
     onNavigateToDetail: (Long) -> Unit,
     getSearchedGamesList: (String) -> List<Game>,
-    onSearch: (String) -> Unit
+    onSearch: (String) -> Unit,
+    allGenres: List<Genre>
 ) {
+    var showFilterSheet by remember { mutableStateOf(false) }
+    // val sheetState = rememberModalBottomSheetState()
+    // val scope = rememberCoroutineScope()
+
+    var favoritesChecked by remember { mutableStateOf(uiState.filter?.isFavorite == true) }
+    var sortMenuBoxState by remember { mutableStateOf(false) }
+    var genreMenuBoxState by remember { mutableStateOf(false) }
+    var selectedGenreState by remember { mutableStateOf<Genre?>(null) }
+
     Scaffold(
         topBar = {
 
@@ -101,23 +127,171 @@ fun GalleryScreenBody(
                 textFieldState = textFieldState,
                 onSearch = onSearch,
                 getSearchedGamesList = getSearchedGamesList,
-                onNavigateToDetail = onNavigateToDetail
+                onNavigateToDetail = onNavigateToDetail,
+                onClickFilterButton = { showFilterSheet = true },
+                // add more when more filters get added
+                hasFiltersApplied = favoritesChecked
             )
-            // eventually, make the size changeable via a setting!
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(128.dp),
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
                 state = listState,
             ) {
-                items(uiState.games) {
-                    GalleryGame(it, onNavigateToDetail)
+                if (uiState.filter != null) {
+                    items(uiState.filter.getFilteredItems(uiState.games)) {
+                        GalleryGame(it, onNavigateToDetail)
+                    }
+                } else {
+                    items(uiState.games) {
+                        GalleryGame(it, onNavigateToDetail)
+                    }
                 }
             }
 
         }
-    }
 
+        if (showFilterSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showFilterSheet = false }
+            ) {
+                Column {
+                    // have a row for sorts...
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(15.dp)
+                            .fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Sort by",
+                        )
+                        ExposedDropdownMenuBox(
+                            expanded = sortMenuBoxState,
+                            onExpandedChange = { sortMenuBoxState = it },
+                            modifier = Modifier,
+                        ) {
+                            // nothing yet TODO implement sort by
+                        }
+                    }
+
+                    // have a row for filters by favorites
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(15.dp)
+                            .fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Favorites only",
+                        )
+                        Switch(
+                            checked = favoritesChecked,
+                            onCheckedChange = {
+                                favoritesChecked = it
+                                onUpdateFilter(uiState.filter!!.copy(isFavorite = it))
+                            }
+                        )
+                    }
+                    // have a row for filters by genre
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(15.dp)
+                            .fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Sort by",
+                        )
+                        ExposedDropdownMenuBox(
+                            expanded = genreMenuBoxState,
+                            onExpandedChange = { genreMenuBoxState = !genreMenuBoxState },
+                        ) {
+                            TextField(
+                                readOnly = true,
+                                value = selectedGenreState?.name ?: "Select genre",
+                                onValueChange = { },
+                                label = { Text("Genre") },
+                                trailingIcon = {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(
+                                        expanded = genreMenuBoxState
+                                    )
+                                },
+                                colors = ExposedDropdownMenuDefaults.textFieldColors(),
+                                modifier = Modifier.menuAnchor(
+                                    MenuAnchorType.PrimaryNotEditable,
+                                    true
+                                )
+                            )
+                            ExposedDropdownMenu(
+                                expanded = genreMenuBoxState,
+                                onDismissRequest = { genreMenuBoxState = false },
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .width(200.dp) // probably use the device screen size TODO
+                                        .height(300.dp)
+                                ) {
+                                    LazyColumn {
+                                        item {
+                                            DropdownMenuItem(
+                                                text = { Text("No filters") },
+                                                onClick = {
+                                                    selectedGenreState = null
+                                                    genreMenuBoxState = false
+                                                    onUpdateFilter(uiState.filter!!.copy(genre = null))
+                                                }
+                                            )
+                                        }
+                                        items(count = allGenres.size) { num ->
+                                            val genre = allGenres[num]
+                                            DropdownMenuItem(
+                                                text = { Text(genre.name) },
+                                                onClick = {
+                                                    selectedGenreState = genre
+                                                    genreMenuBoxState = false
+                                                    onUpdateFilter(
+                                                        uiState.filter!!.copy(
+                                                            genre = listOf(
+                                                                genre.igdbId
+                                                            )
+                                                        )
+                                                    )
+                                                },
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // have a row for filters by library
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+fun FilterRow(
+    name: String,
+    filterComposable: @Composable () -> Unit,
+) {
+    Row(
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier.padding(15.dp)
+    ) {
+        Text(
+            text = name,
+        )
+        filterComposable
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -126,7 +300,9 @@ fun FilterSearchBar(
     textFieldState: TextFieldState,
     onSearch: (String) -> Unit,
     getSearchedGamesList: (String) -> List<Game>,
-    onNavigateToDetail: (Long) -> Unit
+    onNavigateToDetail: (Long) -> Unit,
+    onClickFilterButton: () -> Unit,
+    hasFiltersApplied: Boolean = false
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
     var searchResults = getSearchedGamesList(textFieldState.text.toString())
@@ -152,7 +328,10 @@ fun FilterSearchBar(
                                 textFieldState.edit { replace(0, length, "") } // Clears the text
                             })
                         }
-                        FilterButton(false, {}) // TODO implement this later
+                        FilterButton(
+                            hasFiltersApplied,
+                            onClickFilterButton
+                        ) // TODO implement this later
                     }
                 },
                 onExpandedChange = { expanded = it },
@@ -281,9 +460,11 @@ fun GalleryPreview() {
         listState = LazyGridState(),
         textFieldState = TextFieldState(),
         uiState = uiState,
+        onUpdateFilter = {},
         onNavigateToDetail = {},
-        onSearch = {},
         getSearchedGamesList = { return@GalleryScreenBody listOf<Game>() },
+        onSearch = {},
+        allGenres = listOf()
     )
 }
 @Preview(
@@ -293,16 +474,5 @@ fun GalleryPreview() {
 fun GalleryGameNoImagePreview() {
     val game = Game("Rogue Legacy II", 19)
     GalleryGame(game, {})
-}
-
-@Preview
-@Composable
-fun FilterSearchBarPreview() {
-    FilterSearchBar(
-        textFieldState = TextFieldState(),
-        onSearch = { },
-        getSearchedGamesList = {return@FilterSearchBar emptyList()},
-        onNavigateToDetail = {},
-    )
 }
 

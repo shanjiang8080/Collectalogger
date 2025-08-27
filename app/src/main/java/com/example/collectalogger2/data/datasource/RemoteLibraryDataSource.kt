@@ -148,11 +148,11 @@ abstract class RemoteLibraryDataSource(val gameDao: GameDao) {
 
                 // get genres
                 var genreList = if (igdbResponseObj.has("genres")) igdbResponseObj.getJSONArray("genres") else null
-                var genres: MutableSet<String> = mutableSetOf()
+                var genres: MutableSet<Int> = mutableSetOf()
                 if (genreList != null) {
                     for (i in 0 until genreList.length()) {
                         var genre = genreList[i] as JSONObject
-                        if (genre.has("name")) genres.add(genre.getString("name"))
+                        if (genre.has("name")) genres.add(genre.getInt("id"))
                     }
                 }
 

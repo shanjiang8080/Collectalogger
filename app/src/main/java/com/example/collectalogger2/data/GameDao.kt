@@ -23,7 +23,6 @@ interface GameDao {
     @Query("SELECT * FROM games WHERE id = :id")
     fun getGameStream(id: Long): Flow<Game?>
 
-
     @Query("SELECT * FROM games WHERE igdbId = :igdbId")
     fun getGameByIGDBId(igdbId: Long): Game?
 

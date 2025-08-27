@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.Button
@@ -71,6 +72,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.example.collectalogger2.R
 import com.example.collectalogger2.data.Game
+import com.example.collectalogger2.data.Genre
 import com.example.collectalogger2.util.PlayStatus
 import kotlin.math.floor
 
@@ -78,20 +80,26 @@ import kotlin.math.floor
 fun DetailScreen(
     viewModel: DetailViewModel,
     onNavigateBack: () -> Unit,
-    onEditPlayStatus: (String) -> Unit
+    onEditPlayStatus: (String) -> Unit,
+    onSelectGalleryFilter: (Int?, String?, String?, Boolean?, String?, String?) -> Unit,
+    onSelectEditScreen: (Long) -> Unit
 ) {
 
     val realGame by viewModel.game.collectAsStateWithLifecycle()
+    val gameGenres by viewModel.gameGenres.collectAsStateWithLifecycle()
     val currentDialog by viewModel.currentDialog.collectAsStateWithLifecycle()
 
     if (realGame != null) {
         DetailScreenBody(
             realGame!!,
+            gameGenres,
             onNavigateBack,
             currentDialog,
             { it -> viewModel.setDialog(it) },
             onEditPlayStatus,
-            { viewModel.toggleFavoriteGame() }
+            { viewModel.toggleFavoriteGame() },
+            onSelectGalleryFilter,
+            onSelectEditScreen
         )
     }
 
@@ -102,11 +110,14 @@ fun DetailScreen(
 @Composable
 fun DetailScreenBody(
     game: Game,
+    gameGenres: List<Genre>,
     onNavigateBack: () -> Unit,
     currentDialog: String,
     setDialog: (String) -> Unit,
     onEditPlayStatus: (String) -> Unit,
-    toggleFavorite: () -> Unit
+    toggleFavorite: () -> Unit,
+    onSelectGalleryFilter: (Int?, String?, String?, Boolean?, String?, String?) -> Unit,
+    onSelectEditScreen: (Long) -> Unit
 ) {
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
@@ -130,10 +141,14 @@ fun DetailScreenBody(
                     bottom = 0.dp
                 ),
                 actions = {
-                    Row(
-                        modifier = Modifier.padding(10.dp)
+                    FavoriteIcon(game, toggleFavorite)
+                    IconButton(
+                        onClick = { onSelectEditScreen(game.id) }
                     ) {
-                        FavoriteIcon(game, toggleFavorite)
+                        Icon(
+                            imageVector = Icons.Default.Create,
+                            contentDescription = "Edit"
+                        )
                     }
                 }
                 )
@@ -195,16 +210,22 @@ fun DetailScreenBody(
                                 .padding(5.dp)
                                 .fillMaxWidth()
                         ) {
-                            // For now, just a block with developers and publishers
-                            // Later TODO have each developer/publisher clickable and it will show a filter
-                            // on the gallery.
                             // For developers
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(5.dp)
                             ) {
                                 game.developers.forEach { developer ->
                                     SuggestionChip(
-                                        onClick = {}, // TODO Add a gallery filter link
+                                        onClick = {
+                                            onSelectGalleryFilter(
+                                                null,
+                                                developer,
+                                                null,
+                                                null,
+                                                null,
+                                                null
+                                            )
+                                        },
                                         label = { Text(
                                             text = developer,
                                             color = MaterialTheme.colorScheme.primary
@@ -218,7 +239,16 @@ fun DetailScreenBody(
                             ) {
                                 game.publishers.forEach { publisher ->
                                     SuggestionChip(
-                                        onClick = {}, // TODO Add a gallery filter link
+                                        onClick = {
+                                            onSelectGalleryFilter(
+                                                null,
+                                                null,
+                                                publisher,
+                                                null,
+                                                null,
+                                                null
+                                            )
+                                        },
                                         label = { Text(
                                             text = publisher,
                                             color = MaterialTheme.colorScheme.primary
@@ -265,7 +295,7 @@ fun DetailScreenBody(
                             ) {
                                 // Display platforms owned and genre
                                 PlatformsOwnedBar(game)
-                                GenreCard(game)
+                                GenreCard(game, gameGenres, onSelectGalleryFilter)
 
                             }
 
@@ -338,7 +368,11 @@ fun FavoriteIcon(game: Game, toggleFavorite: () -> Unit) {
 
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
-private fun GenreCard(game: Game) {
+private fun GenreCard(
+    game: Game,
+    gameGenres: List<Genre>,
+    onSelectGalleryFilter: (Int?, String?, String?, Boolean?, String?, String?) -> Unit
+) {
     Card(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.secondaryContainer
@@ -360,12 +394,21 @@ private fun GenreCard(game: Game) {
                 horizontalArrangement = Arrangement.spacedBy(5.dp),
                 verticalArrangement = Arrangement.spacedBy((-10).dp)
             ) {
-                game.genre.forEach { genre ->
+                gameGenres.forEach { genre ->
                     SuggestionChip(
-                        onClick = {}, // TODO Add a gallery filter link
+                        onClick = {
+                            onSelectGalleryFilter(
+                                genre.igdbId,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null
+                            )
+                        },
                         label = {
                             Text(
-                                text = genre,
+                                text = genre.name,
                                 color = MaterialTheme.colorScheme.secondary
                             )
                         },
@@ -666,15 +709,24 @@ fun DetailScreenPreview() {
         epicId = "a",
         developers = setOf("ConcernedApe"),
         publishers = setOf("Chucklefish", "ConcernedApe"),
-        genre = setOf("Role-playing", "Simulator", "Strategy", "Adventure", "Indie")
+        genre = setOf()
+    )
+    val gameGenres = listOf(
+        Genre("Indie", 0, 0),
+        Genre("RPG", 0, 0),
+        Genre("Simulation", 0, 0)
     )
     DetailScreenBody(
         game = game,
+        gameGenres = gameGenres,
         onNavigateBack = {},
         currentDialog = "",
         setDialog = {},
         onEditPlayStatus = {},
-        toggleFavorite = {})
+        toggleFavorite = {},
+        onSelectGalleryFilter = { a: Int?, b: String?, c: String?, d: Boolean?, e: String?, f: String? -> },
+        onSelectEditScreen = {}
+    )
 }
 
 @Composable
@@ -716,7 +768,12 @@ fun LabelIconCombo(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .padding(10.dp)
-            .clickable(enabled = true, onClick = textAction, interactionSource = remember { MutableInteractionSource() }, indication = null)
+            .clickable(
+                enabled = true,
+                onClick = textAction,
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            )
     ) {
         Icon(
             painter = iconPainter,
@@ -737,7 +794,7 @@ fun LabelIconCombo(
 
 
 @Composable
-fun CoverArt(game: Game, deviceWidth: Dp, modifier: Modifier) {
+fun CoverArt(game: Game, deviceWidth: Dp, modifier: Modifier = Modifier) {
     val imageModifier = modifier
         .height(deviceWidth / 1.875f)
         .width(deviceWidth / 2.5f)

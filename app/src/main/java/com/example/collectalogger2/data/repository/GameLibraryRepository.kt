@@ -3,22 +3,75 @@ package com.example.collectalogger2.data.repository
 import android.util.Log
 import com.example.collectalogger2.data.Game
 import com.example.collectalogger2.data.GameDao
+import com.example.collectalogger2.data.Genre
+import com.example.collectalogger2.data.GenreDao
+import com.example.collectalogger2.data.datasource.GenreDataSource
 import com.example.collectalogger2.data.datasource.LocalDataSource
 import com.example.collectalogger2.data.datasource.RemoteLibraryDataSource
 import com.example.collectalogger2.util.APIException
 import com.example.collectalogger2.util.APIStatusException
 import com.example.collectalogger2.util.AccountException
 import com.example.collectalogger2.util.PlayStatus
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 
 // I should replace the `remoteLibraryDataSource` with a list of them
 class GameLibraryRepository(
     private val remoteLibraryDataSources: List<RemoteLibraryDataSource>,
     private val localDataSource: LocalDataSource?,
-    private val gameDao: GameDao
+    private val genreDataSource: GenreDataSource,
+    private val gameDao: GameDao,
+    private val genreDao: GenreDao,
 ) {
+    private var _genreFlow = MutableStateFlow<List<Genre>>(emptyList())
+    var genreFlow: StateFlow<List<Genre>> = _genreFlow.asStateFlow()
+
+    init {
+        CoroutineScope(Dispatchers.IO).launch {
+            genreDao.getAllGenresFlow().collect { it ->
+                _genreFlow.value = it
+                if (_genreFlow.value.isEmpty()) {
+                    genreDataSource.getGenres().forEach { genre ->
+                        genreDao.insert(genre)
+                        Log.i("GameLibraryRepository", "Genre inserted: ${genre.name}")
+                    }
+                }
+            }
+        }
+    }
+
+
+    fun getGenreByIGDBId(id: Int): Genre? {
+        // search through the list
+        var filteredGenreList = genreFlow.value.filter { genre ->
+            return@filter genre.igdbId == id
+        }
+        return if (filteredGenreList.isEmpty()) null
+        else filteredGenreList[0]
+    }
+
+    fun getGenreById(id: Int): Genre? {
+        // search through the list
+        var filteredGenreList = genreFlow.value.filter { genre ->
+            return@filter genre.id == id
+        }
+        return if (filteredGenreList.isEmpty()) null
+        else filteredGenreList[0]
+    }
+
+    suspend fun insertGenre(genre: Genre) = genreDao.insert(genre)
+
+    suspend fun deleteGenre(genre: Genre) = genreDao.delete(genre)
+
+    suspend fun updateGenre(genre: Genre) = genreDao.update(genre)
+
     fun getAllGamesStream(): Flow<List<Game>> = gameDao.getAllGamesStream()
 
     fun getAllGames(): List<Game> = gameDao.getAllGames()

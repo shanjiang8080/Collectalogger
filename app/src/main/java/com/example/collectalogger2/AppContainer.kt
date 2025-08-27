@@ -3,6 +3,7 @@ package com.example.collectalogger2
 import android.content.Context
 import com.example.collectalogger2.data.GameDatabase
 import com.example.collectalogger2.data.datasource.EpicDataSource
+import com.example.collectalogger2.data.datasource.GenreDataSource
 import com.example.collectalogger2.data.datasource.LocalDataSource
 import com.example.collectalogger2.data.datasource.RemoteLibraryDataSource
 import com.example.collectalogger2.data.datasource.SteamDataSource
@@ -33,7 +34,7 @@ class AppDataContainer(private val context: Context) : AppContainer {
     }
     override val gameLibraryRepository: GameLibraryRepository by lazy {
         val gameDao = GameDatabase.getDatabase(context).gameDao()
-
+        val genreDao = GameDatabase.getDatabase(context).genreDao()
 
         GameLibraryRepository(
             remoteLibraryDataSources = emptyList<RemoteLibraryDataSource>()
@@ -43,7 +44,9 @@ class AppDataContainer(private val context: Context) : AppContainer {
                     userInfoSetter = {str -> settingsRepository.saveEpicIdInfo(str) },
                     gameDao = gameDao)),
             localDataSource = LocalDataSource(),
-            gameDao = gameDao
+            genreDataSource = GenreDataSource(),
+            gameDao = gameDao,
+            genreDao = genreDao
         )
     }
 }
