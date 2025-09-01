@@ -58,6 +58,7 @@ abstract class RemoteLibraryDataSource(val gameDao: GameDao) {
         endpoint: String,
         gamePrefix: String,
         customField: String,
+        customFieldLogic: ((JSONObject) -> String)? = null,
         customFieldIsGameAttribute: Boolean = false,
         otherGameFilter: String = "",
         gameJSONPath: (json: JSONObject) -> JSONObject,
@@ -75,7 +76,7 @@ abstract class RemoteLibraryDataSource(val gameDao: GameDao) {
             var request =
                 """
                     fields
-                    ${if (customFieldIsGameAttribute) "game.$customField," else "${customField}," }
+                    ${if (customFieldIsGameAttribute && endpoint != "games") "game.$customField," else "${customField},"}
                     ${gamePrefix}id,
                     ${gamePrefix}summary, 
                     ${gamePrefix}name,
@@ -105,16 +106,21 @@ abstract class RemoteLibraryDataSource(val gameDao: GameDao) {
             }
             for (i in 0 until igdbResponse.length()) {
                 var igdbResponseObj = gameJSONPath(igdbResponse.get(i) as JSONObject)
-                if (!igdbResponseObj.has("name")) { // Note: Some games don't have genre for whatever reason. Peggle Deluxe doesn't, for example.
+                if (!igdbResponseObj.has("name")) {
                     Log.w("IGDBParser", "Missing name in response: $igdbResponse")
                     continue
                 }
                 // Add the info to the Game object
-
-                var customFieldInstance: String = if (customFieldIsGameAttribute) {
-                    if (customField != "") igdbResponseObj.getString(customField) else ""
+                var customFieldInstance: String
+                if (customFieldLogic == null) {
+                    customFieldInstance = if (customFieldIsGameAttribute && endpoint != "games") {
+                        if (customField != "") igdbResponseObj.getString(customField) else ""
+                    } else {
+                        if (customField != "") igdbResponse.getJSONObject(i)
+                            .getString(customField) else ""
+                    }
                 } else {
-                    if (customField != "") igdbResponse.getJSONObject(i).getString(customField) else ""
+                    customFieldInstance = customFieldLogic(igdbResponseObj)
                 }
 
                 // Add value pair objects
