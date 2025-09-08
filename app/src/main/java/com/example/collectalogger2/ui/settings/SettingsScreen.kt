@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.collectalogger2.R
 
+// UPDATE WHEN ADDING LIBRARIES
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel

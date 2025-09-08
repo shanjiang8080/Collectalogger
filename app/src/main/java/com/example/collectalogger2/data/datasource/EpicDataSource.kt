@@ -3,7 +3,12 @@ package com.example.collectalogger2.data.datasource
 import android.util.Log
 import com.example.collectalogger2.data.Game
 import com.example.collectalogger2.data.GameDao
+import com.example.collectalogger2.data.datasource.GameEvent.ExpectedGamesCount
+import com.example.collectalogger2.data.datasource.GameEvent.FinishGamesCount
+import com.example.collectalogger2.data.datasource.GameEvent.GameLoaded
+import com.example.collectalogger2.data.datasource.GameEvent.ListNonImportedGames
 import com.example.collectalogger2.util.AccountException
+import com.example.collectalogger2.util.AccountExpiryException
 import com.example.collectalogger2.util.EpicSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -28,10 +33,14 @@ class EpicDataSource(
     var userInfoFlow: Flow<String>,
     var userInfoSetter: suspend (String) -> Unit,
     gameDao: GameDao) : RemoteLibraryDataSource(gameDao) {
-    override var libraryName: String = "Epic Games"
+    override var libraryName: String = name
+
+    companion object : HasLibraryName {
+        override val name = "Epic Games"
+    }
 
 
-    override suspend fun getGames(forceUpdate: Boolean): Flow<Game> = flow {
+    override suspend fun getGames(forceUpdate: Boolean): Flow<GameEvent> = flow {
         val userInfo = userInfoFlow.first()
         if (userInfo == "") throw AccountException("User is not logged into Epic Games!", libraryName)
         // sets JSON to the thing
@@ -49,6 +58,7 @@ class EpicDataSource(
         var slugNamespaceCatalogItemIdMap = mutableMapOf<String, Pair<String, String>>()
         // Note that appName from items == artifactId from playtimes
         // Used for linking game to playtime
+        // It is the artifactId to name
         var artifactSlugMap = mutableMapOf<String, String>()
         var cursor = ""
         do {
@@ -82,9 +92,8 @@ class EpicDataSource(
                 var catalogItemId = entry.getString("catalogItemId")
                 var appName = entry.getString("appName")
 
-                // TODO before I continue I need to check if the gameSlug is already present
                 // Check if the gameSlug has been seen before
-                // If so, probably defer it until the next pass, since we can use
+                // If so, defer it until the next pass
                 // If it's Live, skip as the namespaces differ and it can handle it already
                 if (gameSlug != "live" && (gameSlug in igdbCallMap || gameSlug in duplicateGamesMap)) {
                     Log.d(
@@ -153,6 +162,10 @@ class EpicDataSource(
             isJsonArray = true
         ) as JSONArray
 
+        // Once you've gotten all games, emit a ExpectedGamesCount event
+        // Note that this is approximate because of DLCs and such.
+        emit(ExpectedGamesCount(artifactSlugMap.size))
+
         // Get the playtimes and map it to the igdbCallMap
         for (ii in 0 until playtimeResponse.length()) {
             val obj = playtimeResponse.getJSONObject(ii)
@@ -204,13 +217,40 @@ class EpicDataSource(
                 )
 
                 if (modifiedEpicGame != epicGame)
-                    emit(modifiedEpicGame)
+                    emit(GameLoaded(modifiedEpicGame))
+
+                // Now, remove it from the maps to prevent it updating again
+                igdbCallMap.remove(slug)
+                slugNamespaceCatalogItemIdMap.remove(slug)
+                artifactSlugMap.remove(appName)
+                duplicateGamesMap.remove(slug)
+                duplicateSlugsMap.remove(appName)
+                Log.d("EpicDataSource", "$slug skipped since it exists in the database")
                 continue
             }
             // Otherwise, add the callMap
             igdbCallMap[slug] = playTime to epicId
 
         }
+
+        // Now, once you've skipped duplicate entries for played games
+        // Skip duplicate entries for unplayed games
+        igdbCallMap.toMap().keys.forEach { key: String ->
+            var pair = igdbCallMap[key]
+            var epicId = pair!!.second
+            var gameFromDb = gameDao.getGameByEpicId(epicId)
+            if (!forceUpdate && gameFromDb != null) {
+                // Remove it from the maps
+                igdbCallMap.remove(key)
+                slugNamespaceCatalogItemIdMap.remove(key)
+                duplicateGamesMap.remove(key)
+                Log.d(
+                    "EpicDataSource",
+                    "unplayed game $key skipped since it exists in the database"
+                )
+            }
+        }
+
 
         var duplicateSet = mutableSetOf<Long>() // Contains game ids for duplicate handling
 
@@ -227,7 +267,7 @@ class EpicDataSource(
             gameJSONPath = { json -> return@callIGDB json.getJSONObject("game") }
         ).forEach { game ->
             if (game.igdbId !in duplicateSet) {
-                emit(game)
+                emit(GameLoaded(game))
                 var slug = getSlug(game.title)
                 if (slug in slugNamespaceCatalogItemIdMap) {
                     slugNamespaceCatalogItemIdMap.remove(slug)
@@ -255,6 +295,15 @@ class EpicDataSource(
             if (games != null) {
                 for (j in 0 until games.size) {
                     var game = games[j]
+                    var epicId = convertEpicIdToString(game.namespace, game.catalogItemId)
+                    var existingGame = gameDao.getGameByEpicId(epicId)
+                    if (existingGame != null) {
+                        if (game.playTime != existingGame.playTime) {
+                            emit(GameLoaded(existingGame.copy(playTime = game.playTime)))
+                        }
+                        Log.d("EpicDataSource", "game $key skipped since it exists in the database")
+                        continue
+                    }
                     // Make a request to gather info about the game with the API call.
                     var catalogResponseRaw = EpicSource.makeAPICall(
                         domain = "catalog-public-service-prod06.ol.epicgames.com",
@@ -279,10 +328,8 @@ class EpicDataSource(
                     var sanitizedSlug =
                         getSlug(catalogResponse.getString("title").replace("\"", ""))
                     // add to both maps
-                    (game.playTime to convertEpicIdToString(
-                        game.namespace,
-                        game.catalogItemId
-                    )).let {
+
+                    (game.playTime to epicId).let {
                         newMap[sanitizedTitle] = it
                         newMapSlugs[sanitizedSlug] = it
                     }
@@ -331,7 +378,7 @@ class EpicDataSource(
             gameJSONPath = { json -> return@callIGDB json }
         ).forEach { game ->
             if (game.igdbId !in duplicateSet) {
-                emit(game)
+                emit(GameLoaded(game))
                 var title = game.title
                 if (title in newMap) {
                     newMap.remove(title)
@@ -356,7 +403,7 @@ class EpicDataSource(
             gameJSONPath = { json -> return@callIGDB json.getJSONObject("game") }
         ).forEach { game ->
             if (game.igdbId !in duplicateSet) {
-                emit(game)
+                emit(GameLoaded(game))
                 var slug = getSlug(game.title)
                 if (slug in newMapSlugs) {
                     newMapSlugs.remove(slug)
@@ -403,16 +450,40 @@ class EpicDataSource(
             includeUpdates = true,
         ).forEach { game ->
             if (game.igdbId !in duplicateSet) {
-                emit(game)
+                emit(GameLoaded(game))
             }
         }
+        // emit a FinishGamesCount
+        emit(FinishGamesCount)
+
         // Log not imported games (often unstable/beta versions)
-        newMap.minus(newKeys).forEach { what ->
-            Log.w("EpicDataSource", "Not imported considering newKeys: $what")
+        val missingGames = newMap.minus(newKeys)
+
+        // emit non-imported games
+        // Turn non-imported game strings into temporary game objects with the names of the games
+        // and their specific IDs
+        val newMissingGames = mutableListOf<Game>()
+        missingGames.forEach { game ->
+            newMissingGames.add(
+                Game(
+                    title = game.key,
+                    epicId = game.value.second,
+                    playTime = game.value.first
+                )
+            )
         }
+        emit(ListNonImportedGames(newMissingGames))
 
 
     }
+
+    override fun copyWithID(
+        game: Game,
+        gameWithId: Game
+    ): Game {
+        return game.copy(epicId = gameWithId.epicId)
+    }
+
     private fun convertEpicIdToString(namespace: String, catalogItemId: String): String {
         return "$namespace $catalogItemId"
     }
@@ -448,7 +519,7 @@ class EpicDataSource(
         localId: String
     ): Game {
         if (localId == "") {
-            Log.w("EpicDataSource", "localId is null! What the fuck!")
+            Log.w("EpicDataSource", "localId is null!")
             throw Exception()
         }
         return game.copy(epicId = localId)
@@ -469,7 +540,10 @@ class EpicDataSource(
         var refreshExpiry = Instant.parse(json.get("refresh_expires_at") as String)
         // if so, throw an exception
         if (!now.isBefore(refreshExpiry))
-            throw AccountException("Cannot refresh login! Must log in again to Epic Games!", libraryName)
+            throw AccountExpiryException(
+                "Cannot refresh login! Must log in again to Epic Games!",
+                libraryName
+            )
         // call a refresh.
         val newJson = EpicSource.makeAPICall(
             domain = "account-public-service-prod03.ol.epicgames.com",

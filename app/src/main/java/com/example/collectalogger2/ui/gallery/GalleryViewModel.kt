@@ -10,12 +10,22 @@ import androidx.savedstate.SavedStateRegistryOwner
 import com.example.collectalogger2.AppContainer
 import com.example.collectalogger2.data.Game
 import com.example.collectalogger2.data.Genre
+import com.example.collectalogger2.data.repository.RepositoryEvent
+import com.example.collectalogger2.ui.gallery.DialogActionType.*
+import com.example.collectalogger2.ui.gallery.SnackbarActionType.*
+import com.example.collectalogger2.ui.gallery.UiEvent.*
+import com.example.collectalogger2.ui.gallery.UiEvent.ShowError
+import com.example.collectalogger2.ui.gallery.UiEvent.ShowSnackbar
+import com.example.collectalogger2.ui.settings.getEpicLogin
+import com.example.collectalogger2.ui.settings.getSteamLogin
 import com.example.collectalogger2.util.Filter
 import com.example.collectalogger2.util.Sort
 import com.example.collectalogger2.util.SortBy
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -26,7 +36,29 @@ data class GalleryUiState(
     val games: List<Game> = emptyList()
 )
 
-class GalleryViewModel(container: AppContainer, savedStateHandle: SavedStateHandle) : ViewModel() {
+sealed class SnackbarActionType {
+    data class NonImportedGames(val items: MutableMap<String, List<Game>>) : SnackbarActionType()
+    object Info : SnackbarActionType()
+}
+
+sealed class DialogActionType {
+    data class LoggedOut(val library: String) : DialogActionType()
+    data class CheckNonImportedItems(val items: Map<String, List<Game>>) : DialogActionType()
+}
+
+// TODO implement a UiEvent thing and make it work properly as snackbars/dialogs
+// snackbars for informational/low priority stuff like retrying, errors, etc
+// also have one for missing games (but add the option for ignore lists in the future...)
+// dialogs for high priority (probably?) like logged out of epic games
+sealed class UiEvent {
+    data class ShowSnackbar(val message: String, val actionType: SnackbarActionType) : UiEvent()
+    data class ShowError(val message: String) : UiEvent()
+    data class ShowDialog(val message: String, val actionType: DialogActionType) : UiEvent()
+    object LoadingFinished : UiEvent()
+}
+
+class GalleryViewModel(val container: AppContainer, savedStateHandle: SavedStateHandle) :
+    ViewModel() {
     // like, for example, Steam account ID
     var repository = container.gameLibraryRepository
 
@@ -38,6 +70,11 @@ class GalleryViewModel(container: AppContainer, savedStateHandle: SavedStateHand
 
     private val _allGameGenres = MutableStateFlow<List<Genre>>(emptyList())
     val allGameGenres = _allGameGenres.asStateFlow()
+
+    private val _uiEvents = MutableSharedFlow<UiEvent>()
+    val uiEvents = _uiEvents.asSharedFlow()
+
+    val loadPercentage = container.gameLibraryRepository.loadPercentage
 
     private fun <T> getList(
         savedStateHandle: SavedStateHandle,
@@ -74,6 +111,42 @@ class GalleryViewModel(container: AppContainer, savedStateHandle: SavedStateHand
                 _allGameGenres.value = genres
             }
         }
+
+        viewModelScope.launch(Dispatchers.Main) {
+            container.gameLibraryRepository.eventFlow.collect { event ->
+                when (event) {
+                    is RepositoryEvent.ShowLoggedOut -> {
+                        _uiEvents.emit(
+                            ShowDialog(
+                                "${event.dataSource.libraryName} session expired.",
+                                LoggedOut(event.dataSource.libraryName)
+                            )
+                        )
+                    }
+
+                    is RepositoryEvent.ShowErrorMessage -> {
+                        _uiEvents.emit(ShowError(event.message))
+                    }
+
+                    is RepositoryEvent.ShowInfoMessage -> {
+                        _uiEvents.emit(ShowSnackbar(event.message, SnackbarActionType.Info))
+                    }
+
+                    is RepositoryEvent.ShowMissingGames -> {
+                        _uiEvents.emit(
+                            ShowSnackbar(
+                                "Some games failed to automatically import",
+                                NonImportedGames(event.gameMap)
+                            )
+                        )
+                    }
+
+                    is RepositoryEvent.ShowLoadingFinished -> {
+                        _uiEvents.emit(LoadingFinished)
+                    }
+                }
+            }
+        }
     }
 
     fun updateFilter(newFilter: Filter) {
@@ -108,6 +181,18 @@ class GalleryViewModel(container: AppContainer, savedStateHandle: SavedStateHand
         }
     }
 
+    // UPDATE WHEN ADDING LIBRARIES
+    fun saveSteamId(url: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            getSteamLogin(url, container)
+        }
+    }
+
+    fun saveEpicInfo(code: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            getEpicLogin(code, container)
+        }
+    }
 
     fun getSearchedGames(search: String) {
         // instead of calling the database, do a filter of the cached games
@@ -125,12 +210,7 @@ class GalleryViewModel(container: AppContainer, savedStateHandle: SavedStateHand
         return filteredGames
     }
 
-    fun restoreGames() {
-        if (cachedGames.value.isEmpty()) {
-            Log.w("GalleryViewModel", "cachedGames has 0 length")
-        }
-        _uiState.value = _uiState.value.copy(games = cachedGames.value)
-    }
+
 }
 
 @Suppress("UNCHECKED_CAST")

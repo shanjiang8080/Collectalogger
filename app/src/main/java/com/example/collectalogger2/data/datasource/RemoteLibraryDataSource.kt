@@ -9,6 +9,27 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
+ * These classes are emitted by the getGames methods.
+ * - GameLoaded contains a game
+ * - ExpectedGamesCount tells the caller the expected number of games the method should return
+ * This can be used in combination with gameLoaded accumulation for a loading bar
+ * Ideally, this is sent once.
+ * - FinishGamesCount tells the caller that all games have been imported
+ * - ListNonImportedGames tells the caller a list of non-imported games, if any
+ */
+sealed class GameEvent {
+    data class GameLoaded(val game: Game) : GameEvent()
+    data class ExpectedGamesCount(val count: Int) : GameEvent()
+    object FinishGamesCount : GameEvent()
+    data class ListNonImportedGames(val games: List<Game>) : GameEvent()
+}
+
+
+interface HasLibraryName {
+    val name: String
+}
+
+/**
  * The base class that all libraries (Steam, Epic, etc) derive from.
  * Other methods may be added later, like achievements. Or not! I dunno about architecture.
  */
@@ -21,7 +42,12 @@ abstract class RemoteLibraryDataSource(val gameDao: GameDao) {
      * Does not add the games to the database automatically.
      * - forceUpdate: If true, the response will re-import existing database games.
      */
-    abstract suspend fun getGames(forceUpdate: Boolean = false): Flow<Game>
+    abstract suspend fun getGames(forceUpdate: Boolean = false): Flow<GameEvent>
+
+    /**
+     * Given a game and a game with a store-specific ID, it returns the game with the ID.
+     */
+    abstract fun copyWithID(game: Game, gameWithId: Game): Game
 
     /**
      * This method takes in a String and returns the String without
@@ -98,12 +124,7 @@ abstract class RemoteLibraryDataSource(val gameDao: GameDao) {
                 endpoint,
                 request
             )
-            if (igdbResponse.length() == 1 && gamesSnippet.size != 1) {
-                Log.e("IGDBParser", "Something went wrong: $igdbResponse")
-            }
-            else {
-                Log.d("IGDBParser", "Response length: ${igdbResponse.length()}")
-            }
+            Log.d("IGDBParser", "Response length: ${igdbResponse.length()}")
             for (i in 0 until igdbResponse.length()) {
                 var igdbResponseObj = gameJSONPath(igdbResponse.get(i) as JSONObject)
                 if (!igdbResponseObj.has("name")) {

@@ -1,5 +1,6 @@
 package com.example.collectalogger2.ui.gallery
 
+import android.util.Log
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -31,6 +32,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -39,11 +41,17 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -61,7 +69,12 @@ import coil3.compose.AsyncImage
 import com.example.collectalogger2.R
 import com.example.collectalogger2.data.Game
 import com.example.collectalogger2.data.Genre
+import com.example.collectalogger2.ui.gallery.DialogActionType.*
+import com.example.collectalogger2.ui.settings.EpicOverlay
+import com.example.collectalogger2.ui.settings.SteamOverlay
 import com.example.collectalogger2.util.Filter
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,6 +89,7 @@ fun GalleryScreen(
         LazyGridState()
     }
     val allGenres by viewModel.allGameGenres.collectAsStateWithLifecycle()
+    val loadPercentage by viewModel.loadPercentage.collectAsStateWithLifecycle()
     // eventually, the uiState can be changed by filters.
     // not now, though.
     GalleryScreenBody(
@@ -86,8 +100,12 @@ fun GalleryScreen(
         allGenres = allGenres,
         onUpdateFilter = { viewModel.updateFilter(it) },
         onNavigateToDetail = onNavigateToDetail,
-        getSearchedGamesList = {it -> viewModel.getSearchedGamesList(it) },
-        onSearch = {it -> viewModel.getSearchedGames(it) }
+        getSearchedGamesList = { it -> viewModel.getSearchedGamesList(it) },
+        onSearch = { it -> viewModel.getSearchedGames(it) },
+        uiEvents = viewModel.uiEvents,
+        saveSteamId = { it -> viewModel.saveSteamId(it) },
+        saveEpicId = { it -> viewModel.saveEpicInfo(it) },
+        loadPercentage = loadPercentage
     )
 }
 
@@ -103,7 +121,11 @@ fun GalleryScreenBody(
     onNavigateToDetail: (Long) -> Unit,
     getSearchedGamesList: (String) -> List<Game>,
     onSearch: (String) -> Unit,
-    allGenres: List<Genre>
+    allGenres: List<Genre>,
+    uiEvents: SharedFlow<UiEvent>,
+    saveSteamId: (String) -> Unit,
+    saveEpicId: (String) -> Unit,
+    loadPercentage: Float,
 ) {
     var showFilterSheet by remember { mutableStateOf(false) }
     // val sheetState = rememberModalBottomSheetState()
@@ -113,13 +135,114 @@ fun GalleryScreenBody(
     var sortMenuBoxState by remember { mutableStateOf(false) }
     var genreMenuBoxState by remember { mutableStateOf(false) }
     var selectedGenreState by remember { mutableStateOf<Genre?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    var dialogState by remember { mutableStateOf<DialogActionType?>(null) }
+    // To handle loading, and also disable the refresh button
+    var loading by remember { mutableStateOf(false) }
+
+    // Dunno where to put this
+    LaunchedEffect(Unit) {
+        uiEvents.collect { event ->
+            when (event) {
+                is UiEvent.ShowDialog -> {
+                    dialogState = event.actionType
+                }
+
+                is UiEvent.ShowError -> {
+                    snackbarHostState.showSnackbar(
+                        message = event.message
+                    )
+                }
+
+                is UiEvent.ShowSnackbar -> {
+                    val actionLabel: String?
+                    val withDismissAction: Boolean
+                    val duration: SnackbarDuration
+                    val performedAction: () -> Unit
+                    when (event.actionType) {
+                        SnackbarActionType.Info -> {
+                            actionLabel = null
+                            withDismissAction = false
+                            duration = SnackbarDuration.Short
+                        }
+
+                        is SnackbarActionType.NonImportedGames -> {
+                            actionLabel = "Review"
+                            withDismissAction = true
+                            duration = SnackbarDuration.Indefinite
+                            performedAction = {
+                                dialogState = CheckNonImportedItems(event.actionType.items)
+                            }
+                        }
+                    }
+
+                    val result = snackbarHostState.showSnackbar(
+                        message = event.message,
+                        actionLabel = actionLabel,
+                        withDismissAction = withDismissAction,
+                        duration = duration
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        performedAction()
+                    }
+
+                }
+
+                is UiEvent.LoadingFinished -> {
+                    loading = false
+                }
+            }
+        }
+
+    }
+
+    if (dialogState != null) {
+        when (dialogState!!) {
+            is DialogActionType.CheckNonImportedItems -> {
+                // Nothing for now
+                // TODO create a composable to try to import them or ignore them
+                Log.i("GalleryScreen", "${(dialogState as CheckNonImportedItems).items}")
+            }
+
+            is DialogActionType.LoggedOut -> {
+                // onDismiss is the same always, so define it here
+                var onDismiss = { dialogState = null }
+                // UPDATE WHEN ADDING LIBRARIES
+                when ((dialogState as DialogActionType.LoggedOut).library) {
+                    "Steam" -> {
+                        SteamOverlay(onDismiss, saveSteamId)
+                    }
+
+                    "Epic Games" -> {
+                        EpicOverlay(onDismiss, saveEpicId)
+                    }
+                }
+            }
+        }
+    }
+
 
     Scaffold(
         topBar = {
-
+            if (loading && loadPercentage != -1f) {
+                LinearProgressIndicator(
+                    color = MaterialTheme.colorScheme.primary,
+                    progress = { loadPercentage },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState)
         },
         floatingActionButton = {
-            FloatingRefreshButton(updateGames)
+            FloatingRefreshButton({
+                updateGames(); loading = true; Log.d(
+                "GalleryScreen",
+                "Loading button pressed!"
+            )
+            }, loading)
         }
     ) {
         Column {
@@ -340,9 +463,10 @@ fun FilterSearchBar(
         },
         expanded = expanded,
         onExpandedChange = {it: Boolean -> expanded = it},
-        windowInsets = WindowInsets(bottom = 0.dp),
+        windowInsets = WindowInsets(top = 0.dp),
         modifier = Modifier
             .fillMaxWidth()
+            .padding(10.dp, 7.dp, 10.dp, 10.dp)
     ) {
         LazyColumn {
             items(count = searchResults.size) { index ->
@@ -403,13 +527,23 @@ fun SearchClearButton(clearFilter: () -> Unit) {
 }
 
 @Composable
-fun FloatingRefreshButton(onClick: () -> Unit) {
-    FloatingActionButton(
-        onClick = onClick,
-        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-        contentColor = MaterialTheme.colorScheme.secondary
-    ) {
-        Icon(Icons.Filled.Refresh, "Update games button.")
+fun FloatingRefreshButton(onClick: () -> Unit, loading: Boolean) {
+    if (!loading) {
+        FloatingActionButton(
+            onClick = onClick,
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.secondary,
+        ) {
+            Icon(Icons.Filled.Refresh, "Update games button.")
+        }
+    } else {
+        FloatingActionButton(
+            onClick = {},
+            containerColor = MaterialTheme.colorScheme.surfaceDim,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        ) {
+            Icon(Icons.Filled.Refresh, "Update games button (disabled).")
+        }
     }
 }
 
@@ -464,7 +598,11 @@ fun GalleryPreview() {
         onNavigateToDetail = {},
         getSearchedGamesList = { return@GalleryScreenBody listOf<Game>() },
         onSearch = {},
-        allGenres = listOf()
+        allGenres = listOf(),
+        uiEvents = MutableSharedFlow<UiEvent>(),
+        saveSteamId = {},
+        saveEpicId = {},
+        loadPercentage = -1f
     )
 }
 @Preview(

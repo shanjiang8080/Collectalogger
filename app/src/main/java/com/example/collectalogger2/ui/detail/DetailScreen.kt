@@ -73,6 +73,8 @@ import coil3.compose.AsyncImage
 import com.example.collectalogger2.R
 import com.example.collectalogger2.data.Game
 import com.example.collectalogger2.data.Genre
+import com.example.collectalogger2.data.datasource.EpicDataSource
+import com.example.collectalogger2.data.datasource.SteamDataSource
 import com.example.collectalogger2.util.PlayStatus
 import kotlin.math.floor
 
@@ -467,7 +469,7 @@ private fun ScreenshotCarousel(game: Game) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PlatformsOwnedBar(game: Game) {
-    if (game.steamId != -1L || game.epicId != "") { // Add more later
+    if (game.source.isNotEmpty()) {
         Card(
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer
@@ -489,7 +491,7 @@ fun PlatformsOwnedBar(game: Game) {
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     maxItemsInEachRow = 2
                 ) {
-                    if (game.steamId != -1L) {
+                    if (SteamDataSource.name in game.source) {
                         // Display a Steam icon
                         Icon(
                             painter = painterResource(id = R.drawable.logo_steam),
@@ -498,7 +500,7 @@ fun PlatformsOwnedBar(game: Game) {
                             tint = MaterialTheme.colorScheme.secondary,
                         )
                     }
-                    if (game.epicId != "") {
+                    if (EpicDataSource.name in game.source) {
                         // Display an Epic icon
                         Icon(
                             painter = painterResource(id = R.drawable.logo_egs),

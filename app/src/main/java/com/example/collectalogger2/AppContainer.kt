@@ -38,7 +38,8 @@ class AppDataContainer(private val context: Context) : AppContainer {
 
         GameLibraryRepository(
             remoteLibraryDataSources = emptyList<RemoteLibraryDataSource>()
-                .plus(SteamDataSource(settingsRepository.steamId, gameDao)) // Can add more DataSources later,
+                // UPDATE WHEN ADDING LIBRARIES
+                .plus(SteamDataSource(settingsRepository.steamId, gameDao))
                 .plus(EpicDataSource(
                     userInfoFlow = settingsRepository.epicIdInfo,
                     userInfoSetter = {str -> settingsRepository.saveEpicIdInfo(str) },
