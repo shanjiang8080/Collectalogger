@@ -14,6 +14,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.collectalogger2.R
+import com.example.collectalogger2.ui.overlays.EpicOverlay
+import com.example.collectalogger2.ui.overlays.GogOverlay
+import com.example.collectalogger2.ui.overlays.SteamOverlay
 
 // UPDATE WHEN ADDING LIBRARIES
 @Composable
@@ -22,6 +25,7 @@ fun SettingsScreen(
 ) {
     val steamId by viewModel.steamId.collectAsStateWithLifecycle()
     val epicInfo by viewModel.epicInfo.collectAsStateWithLifecycle()
+    val gogUsername by viewModel.gogUsername.collectAsStateWithLifecycle()
     val activeStoreFront by viewModel.currentStoreFront.collectAsStateWithLifecycle()
 
     Column() {
@@ -42,12 +46,27 @@ fun SettingsScreen(
                 "Epic Games button",
                 epicInfo.isEmpty()
             ) { viewModel.setStoreFront("Epic") }
+            GameLibraryButton(
+                R.drawable.logo_gog,
+                "GOG button",
+                gogUsername.isEmpty()
+            ) { viewModel.setStoreFront("GOG") }
         }
     }
-
+    val onDismiss = { viewModel.setStoreFront("") }
     when (activeStoreFront) {
-        "Steam" -> SteamOverlay(onDismiss = { viewModel.setStoreFront("") }, saveSteamID = { url -> viewModel.saveSteamId(url) })
-        "Epic" -> EpicOverlay(onDismiss = { viewModel.setStoreFront("") }, saveEpicID = { info -> viewModel.saveEpicInfo(info)})
+        "Steam" -> SteamOverlay(
+            onDismiss = onDismiss,
+            saveSteamID = { url -> viewModel.saveSteamId(url) })
+
+        "Epic" -> EpicOverlay(
+            onDismiss = onDismiss,
+            saveEpicID = { info -> viewModel.saveEpicInfo(info) })
+
+        "GOG" -> GogOverlay(
+            onDismiss = onDismiss,
+            saveGogUsername = { username -> viewModel.saveGogUsername(username) }
+        )
         else -> {}
 
     }

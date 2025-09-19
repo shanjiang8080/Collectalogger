@@ -14,9 +14,12 @@ class SettingsViewModel(val container: AppContainer) : ViewModel() {
     private val _steamId = MutableStateFlow<String>("")
     private val _epicInfo = MutableStateFlow<String>("")
     private val _currentStoreFront = MutableStateFlow<String>("")
+    private val _gogUsername = MutableStateFlow<String>("")
     val currentStoreFront = _currentStoreFront.asStateFlow()
     val steamId = _steamId.asStateFlow()
     val epicInfo = _epicInfo.asStateFlow()
+    val gogUsername = _gogUsername.asStateFlow()
+
     init {
         viewModelScope.launch {
             container.settingsRepository.steamId.collect { id ->
@@ -45,6 +48,16 @@ class SettingsViewModel(val container: AppContainer) : ViewModel() {
     fun saveEpicInfo(code: String) {
         viewModelScope.launch(Dispatchers.IO) {
             getEpicLogin(code, container)
+        }
+    }
+
+    /**
+     * Saves the GOG username to the settings given the code.
+     * Returns true if successful, false if not.
+     */
+    fun saveGogUsername(username: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            getGogLogin(username, container)
         }
     }
 

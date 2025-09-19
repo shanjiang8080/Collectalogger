@@ -12,6 +12,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     private companion object {
         val STEAM_ID = stringPreferencesKey("steam_id")
         val EPIC_ID_INFO = stringPreferencesKey("epic_id_info")
+        val GOG_USERNAME = stringPreferencesKey("gog_username")
     }
     val steamId: Flow<String> =
         dataStore.data.map { preferences ->
@@ -22,10 +23,18 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             preferences[EPIC_ID_INFO] ?: ""
         }
 
+    val gogUsername: Flow<String> =
+        dataStore.data.map { preferences ->
+            preferences[GOG_USERNAME] ?: ""
+        }
+
     suspend fun saveSteamId(id: String) {
         dataStore.edit { it[STEAM_ID] = id }
     }
     suspend fun saveEpicIdInfo(info: String) {
         dataStore.edit { it[EPIC_ID_INFO] = info }
+    }
+    suspend fun saveGogUsername(username: String) {
+        dataStore.edit { it[GOG_USERNAME] = username }
     }
 }

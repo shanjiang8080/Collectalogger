@@ -40,6 +40,8 @@ data class Game(
     // and an epicId as well, though it's a string.
     @ColumnInfo(name = "epicId", defaultValue = "")
     val epicId: String = "",
+    @ColumnInfo(name = "gogId", defaultValue = "")
+    val gogId: String = "",
     // This is for IGDB screenshots
     @ColumnInfo(name = "screenshots", defaultValue = "")
     val screenshots: List<String> = listOf(),

@@ -142,12 +142,14 @@ class GameLibraryRepository(
                             when (gameEvent) {
                                 is GameEvent.GameLoaded -> {
                                     var game = gameEvent.game
-                                    // Increment the actualGamesCount for percentage bar
-                                    actualGamesCount++
-                                    // Update bar if appropriate
-                                    if (expectedGamesCount != -1)
-                                        _loadPercentage.value =
-                                            (actualGamesCount.toFloat() / expectedGamesCount)
+                                    if (gameEvent.incrementGameCount) {
+                                        // Increment the actualGamesCount for percentage bar
+                                        actualGamesCount++
+                                        // Update bar if appropriate
+                                        if (expectedGamesCount != -1)
+                                            _loadPercentage.value =
+                                                (actualGamesCount.toFloat() / expectedGamesCount)
+                                    }
 
                                     // See if it's here, if there is one
                                     val existingGame = gameDao.getGameByIGDBId(game.igdbId)
@@ -200,17 +202,23 @@ class GameLibraryRepository(
                                         )
                                     }
                                 }
-
                                 is GameEvent.ExpectedGamesCount -> {
                                     expectedGamesCount = gameEvent.count
                                 }
-
                                 GameEvent.FinishGamesCount -> {
                                     _loadPercentage.value = 1f
                                 }
-
                                 is GameEvent.ListNonImportedGames -> {
                                     missingGamesMap[dataSource.libraryName] = gameEvent.games
+                                }
+
+                                GameEvent.IncrementGamesCount -> {
+                                    // Increment the actualGamesCount for percentage bar
+                                    actualGamesCount++
+                                    if (expectedGamesCount != -1)
+                                        _loadPercentage.value =
+                                            (actualGamesCount.toFloat() / expectedGamesCount)
+
                                 }
                             }
                         }

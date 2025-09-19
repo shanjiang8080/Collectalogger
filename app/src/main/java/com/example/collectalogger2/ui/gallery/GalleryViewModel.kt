@@ -11,9 +11,10 @@ import com.example.collectalogger2.AppContainer
 import com.example.collectalogger2.data.Game
 import com.example.collectalogger2.data.Genre
 import com.example.collectalogger2.data.repository.RepositoryEvent
-import com.example.collectalogger2.ui.gallery.DialogActionType.*
-import com.example.collectalogger2.ui.gallery.SnackbarActionType.*
-import com.example.collectalogger2.ui.gallery.UiEvent.*
+import com.example.collectalogger2.ui.gallery.DialogActionType.LoggedOut
+import com.example.collectalogger2.ui.gallery.SnackbarActionType.NonImportedGames
+import com.example.collectalogger2.ui.gallery.UiEvent.LoadingFinished
+import com.example.collectalogger2.ui.gallery.UiEvent.ShowDialog
 import com.example.collectalogger2.ui.gallery.UiEvent.ShowError
 import com.example.collectalogger2.ui.gallery.UiEvent.ShowSnackbar
 import com.example.collectalogger2.ui.settings.getEpicLogin
@@ -123,15 +124,12 @@ class GalleryViewModel(val container: AppContainer, savedStateHandle: SavedState
                             )
                         )
                     }
-
                     is RepositoryEvent.ShowErrorMessage -> {
                         _uiEvents.emit(ShowError(event.message))
                     }
-
                     is RepositoryEvent.ShowInfoMessage -> {
                         _uiEvents.emit(ShowSnackbar(event.message, SnackbarActionType.Info))
                     }
-
                     is RepositoryEvent.ShowMissingGames -> {
                         _uiEvents.emit(
                             ShowSnackbar(
@@ -140,7 +138,6 @@ class GalleryViewModel(val container: AppContainer, savedStateHandle: SavedState
                             )
                         )
                     }
-
                     is RepositoryEvent.ShowLoadingFinished -> {
                         _uiEvents.emit(LoadingFinished)
                     }
@@ -180,7 +177,6 @@ class GalleryViewModel(val container: AppContainer, savedStateHandle: SavedState
             _cachedGames.value = listOf<Game>()
         }
     }
-
     // UPDATE WHEN ADDING LIBRARIES
     fun saveSteamId(url: String) {
         viewModelScope.launch(Dispatchers.IO) {

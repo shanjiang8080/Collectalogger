@@ -18,7 +18,8 @@ import org.json.JSONObject
  * - ListNonImportedGames tells the caller a list of non-imported games, if any
  */
 sealed class GameEvent {
-    data class GameLoaded(val game: Game) : GameEvent()
+    data class GameLoaded(val game: Game, val incrementGameCount: Boolean = true) : GameEvent()
+    object IncrementGamesCount : GameEvent()
     data class ExpectedGamesCount(val count: Int) : GameEvent()
     object FinishGamesCount : GameEvent()
     data class ListNonImportedGames(val games: List<Game>) : GameEvent()

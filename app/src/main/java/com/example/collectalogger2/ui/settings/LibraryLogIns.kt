@@ -40,6 +40,17 @@ suspend fun getEpicLogin(code: String, container: AppContainer) {
 
 }
 
+suspend fun getGogLogin(username: String, container: AppContainer) {
+    val id: String
+    try {
+        id = username // perhaps process this later
+        container.settingsRepository.saveGogUsername(id)
+        Log.i("GOG username saved!", id)
+    } catch (e: Exception) {
+        Log.e("Failed to save GOG username!", e.message ?: "")
+    }
+}
+
 /**
  * This function takes in a URL like https://steamcommunity.com/id/personnotman/
  * and converts it to the steamID.

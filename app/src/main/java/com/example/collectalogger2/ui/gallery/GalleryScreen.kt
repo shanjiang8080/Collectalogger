@@ -1,7 +1,7 @@
 package com.example.collectalogger2.ui.gallery
 
-import android.util.Log
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -51,7 +51,6 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -69,9 +68,9 @@ import coil3.compose.AsyncImage
 import com.example.collectalogger2.R
 import com.example.collectalogger2.data.Game
 import com.example.collectalogger2.data.Genre
-import com.example.collectalogger2.ui.gallery.DialogActionType.*
-import com.example.collectalogger2.ui.settings.EpicOverlay
-import com.example.collectalogger2.ui.settings.SteamOverlay
+import com.example.collectalogger2.ui.gallery.DialogActionType.CheckNonImportedItems
+import com.example.collectalogger2.ui.overlays.EpicOverlay
+import com.example.collectalogger2.ui.overlays.SteamOverlay
 import com.example.collectalogger2.util.Filter
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -148,13 +147,11 @@ fun GalleryScreenBody(
                 is UiEvent.ShowDialog -> {
                     dialogState = event.actionType
                 }
-
                 is UiEvent.ShowError -> {
                     snackbarHostState.showSnackbar(
                         message = event.message
                     )
                 }
-
                 is UiEvent.ShowSnackbar -> {
                     val actionLabel: String?
                     val withDismissAction: Boolean
@@ -166,7 +163,6 @@ fun GalleryScreenBody(
                             withDismissAction = false
                             duration = SnackbarDuration.Short
                         }
-
                         is SnackbarActionType.NonImportedGames -> {
                             actionLabel = "Review"
                             withDismissAction = true
@@ -188,7 +184,6 @@ fun GalleryScreenBody(
                     }
 
                 }
-
                 is UiEvent.LoadingFinished -> {
                     loading = false
                 }
@@ -204,7 +199,6 @@ fun GalleryScreenBody(
                 // TODO create a composable to try to import them or ignore them
                 Log.i("GalleryScreen", "${(dialogState as CheckNonImportedItems).items}")
             }
-
             is DialogActionType.LoggedOut -> {
                 // onDismiss is the same always, so define it here
                 var onDismiss = { dialogState = null }
@@ -213,7 +207,6 @@ fun GalleryScreenBody(
                     "Steam" -> {
                         SteamOverlay(onDismiss, saveSteamId)
                     }
-
                     "Epic Games" -> {
                         EpicOverlay(onDismiss, saveEpicId)
                     }

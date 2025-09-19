@@ -18,7 +18,7 @@ object EpicSource {
     private val client = HttpClient(Android)
     private val mutex = Mutex()
     private var lastRequestTime = 0L
-    private const val RATE_LIMIT_DELAY_MS = 400L // Who knows the real rate limit ¯\_(ツ)_/¯
+    private const val RATE_LIMIT_DELAY_MS = 10L // Who knows the real rate limit ¯\_(ツ)_/¯
 
     /**
      * This method creates an API call to Epic Games with a domain, path, headers,

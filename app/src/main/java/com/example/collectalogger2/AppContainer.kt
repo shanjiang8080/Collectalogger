@@ -4,6 +4,7 @@ import android.content.Context
 import com.example.collectalogger2.data.GameDatabase
 import com.example.collectalogger2.data.datasource.EpicDataSource
 import com.example.collectalogger2.data.datasource.GenreDataSource
+import com.example.collectalogger2.data.datasource.GogDataSource
 import com.example.collectalogger2.data.datasource.LocalDataSource
 import com.example.collectalogger2.data.datasource.RemoteLibraryDataSource
 import com.example.collectalogger2.data.datasource.SteamDataSource
@@ -39,10 +40,21 @@ class AppDataContainer(private val context: Context) : AppContainer {
         GameLibraryRepository(
             remoteLibraryDataSources = emptyList<RemoteLibraryDataSource>()
                 // UPDATE WHEN ADDING LIBRARIES
-                .plus(SteamDataSource(settingsRepository.steamId, gameDao))
+                .plus(
+                    SteamDataSource(
+                        userIdFlow = settingsRepository.steamId,
+                        gameDao = gameDao
+                    )
+                )
                 .plus(EpicDataSource(
                     userInfoFlow = settingsRepository.epicIdInfo,
                     userInfoSetter = {str -> settingsRepository.saveEpicIdInfo(str) },
+                    gameDao = gameDao
+                )
+                )
+                .plus(
+                    GogDataSource(
+                        usernameFlow = settingsRepository.gogUsername,
                     gameDao = gameDao)),
             localDataSource = LocalDataSource(),
             genreDataSource = GenreDataSource(),

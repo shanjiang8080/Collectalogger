@@ -6,6 +6,7 @@ import com.example.collectalogger2.data.GameDao
 import com.example.collectalogger2.data.datasource.GameEvent.ExpectedGamesCount
 import com.example.collectalogger2.data.datasource.GameEvent.FinishGamesCount
 import com.example.collectalogger2.data.datasource.GameEvent.GameLoaded
+import com.example.collectalogger2.data.datasource.GameEvent.IncrementGamesCount
 import com.example.collectalogger2.data.datasource.GameEvent.ListNonImportedGames
 import com.example.collectalogger2.util.AccountException
 import com.example.collectalogger2.util.AccountExpiryException
@@ -319,6 +320,9 @@ class EpicDataSource(
                         params = mapOf(),
                         bodyParams = mapOf()
                     ) as JSONObject
+                    // emit an increment games count
+                    emit(IncrementGamesCount)
+
                     var catalogResponse = catalogResponseRaw.get(game.catalogItemId) as JSONObject
                     // filter out DLCs
                     if (isGameExtra(catalogResponse)) continue
@@ -353,6 +357,9 @@ class EpicDataSource(
                 params = mapOf(),
                 bodyParams = mapOf()
             ) as JSONObject)
+            // emit an increment games count
+            emit(IncrementGamesCount)
+
             var catalogResponse = catalogResponseRaw.get(pair.second) as JSONObject
 
             if (isGameExtra(catalogResponse)) continue
@@ -378,7 +385,7 @@ class EpicDataSource(
             gameJSONPath = { json -> return@callIGDB json }
         ).forEach { game ->
             if (game.igdbId !in duplicateSet) {
-                emit(GameLoaded(game))
+                emit(GameLoaded(game, false))
                 var title = game.title
                 if (title in newMap) {
                     newMap.remove(title)
