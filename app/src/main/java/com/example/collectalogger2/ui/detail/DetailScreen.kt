@@ -509,6 +509,7 @@ fun PlatformsOwnedBar(game: Game) {
                             tint = MaterialTheme.colorScheme.secondary
                         )
                     }
+                    // TODO add a GOG icon thing
                 }
 
             }
