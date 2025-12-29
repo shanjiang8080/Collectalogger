@@ -40,7 +40,6 @@ class EpicDataSource(
         override val name = "Epic Games"
     }
 
-
     override suspend fun getGames(forceUpdate: Boolean): Flow<GameEvent> = flow {
         val userInfo = userInfoFlow.first()
         if (userInfo == "") throw AccountException("User is not logged into Epic Games!", libraryName)
@@ -93,62 +92,71 @@ class EpicDataSource(
                 var catalogItemId = entry.getString("catalogItemId")
                 var appName = entry.getString("appName")
 
-                // Check if the gameSlug has been seen before
-                // If so, defer it until the next pass
-                // If it's Live, skip as the namespaces differ and it can handle it already
-                if (gameSlug != "live" && (gameSlug in igdbCallMap || gameSlug in duplicateGamesMap)) {
-                    Log.d(
-                        "EpicDataSource",
-                        "Game with slug $gameSlug and id $namespace $catalogItemId is duplicate"
-                    )
-                    // If the slug is in the call map, remove the existing entries
-                    // also remove the entries from the namespaceCatalogItemIdMap
-                    // and artifactSlugMap
-                    if (gameSlug in igdbCallMap) {
-                        // Remove existing game from existing maps
-                        var pair = slugNamespaceCatalogItemIdMap.remove(gameSlug)
-                        var name = artifactSlugMap.entries.find { it.value == gameSlug }?.key
-                        igdbCallMap.remove(gameSlug)
-                        artifactSlugMap.remove(name)
-                        if (pair != null && name != null) {
-                            Log.d(
-                                "EpicDataSource",
-                                "Previous game with $gameSlug, appName $name and id ${pair.first} ${pair.second} removed from map"
-                            )
+                // HACK: make live games work
+                if (gameSlug == "live") {
+                    var tempSlug = "$gameSlug$catalogItemId"
+                    artifactSlugMap[appName] = tempSlug
+                    slugNamespaceCatalogItemIdMap[tempSlug] = namespace to catalogItemId
+                    // You need a placeholder because if not it won't get imported
+                    igdbCallMap[tempSlug] = 0L to convertEpicIdToString(namespace, catalogItemId)
+                } else {
+                    // Check if the gameSlug has been seen before
+                    // If so, defer it until the next pass
+                    // If it's Live, skip as the namespaces differ and it can handle it already
+                    if (gameSlug in igdbCallMap || gameSlug in duplicateGamesMap) {
+                        Log.d(
+                            "EpicDataSource",
+                            "Game with slug $gameSlug and id $namespace $catalogItemId is duplicate"
+                        )
+                        // If the slug is in the call map, remove the existing entries
+                        // also remove the entries from the namespaceCatalogItemIdMap
+                        // and artifactSlugMap
+                        if (gameSlug in igdbCallMap) {
+                            // Remove existing game from existing maps
+                            var pair = slugNamespaceCatalogItemIdMap.remove(gameSlug)
+                            var name = artifactSlugMap.entries.find { it.value == gameSlug }?.key
+                            igdbCallMap.remove(gameSlug)
+                            artifactSlugMap.remove(name)
+                            if (pair != null && name != null) {
+                                Log.d(
+                                    "EpicDataSource",
+                                    "Previous game with $gameSlug, appName $name and id ${pair.first} ${pair.second} removed from map"
+                                )
 
-                            // add existingGame to duplicate maps
-                            EpicGame(name, pair.first, pair.second).let { oldGame ->
-                                if (gameSlug !in duplicateGamesMap) {
-                                    duplicateGamesMap[gameSlug] = mutableListOf(oldGame)
-                                } else {
-                                    duplicateGamesMap[gameSlug]!!.add(oldGame)
+                                // add existingGame to duplicate maps
+                                EpicGame(name, pair.first, pair.second).let { oldGame ->
+                                    if (gameSlug !in duplicateGamesMap) {
+                                        duplicateGamesMap[gameSlug] = mutableListOf(oldGame)
+                                    } else {
+                                        duplicateGamesMap[gameSlug]!!.add(oldGame)
+                                    }
                                 }
+                                duplicateSlugsMap[name] = gameSlug
+
+                            } else {
+                                Log.w(
+                                    "EpicDataSource",
+                                    "Game with slug $gameSlug has a null pair or appName! Pair: $pair, appName: $name"
+                                )
                             }
-                            duplicateSlugsMap[name] = gameSlug
-
-                        } else {
-                            Log.w(
-                                "EpicDataSource",
-                                "Game with slug $gameSlug has a null pair or appName! Pair: $pair, appName: $name"
-                            )
                         }
-                    }
-                    // Add the dupe game to the duplicateGamesMap
-                    EpicGame(appName, namespace, catalogItemId).let { dupeGame ->
-                        if (gameSlug !in duplicateGamesMap) {
-                            duplicateGamesMap[gameSlug] = mutableListOf(dupeGame)
-                        } else {
-                            duplicateGamesMap[gameSlug]!!.add(dupeGame)
+                        // Add the dupe game to the duplicateGamesMap
+                        EpicGame(appName, namespace, catalogItemId).let { dupeGame ->
+                            if (gameSlug !in duplicateGamesMap) {
+                                duplicateGamesMap[gameSlug] = mutableListOf(dupeGame)
+                            } else {
+                                duplicateGamesMap[gameSlug]!!.add(dupeGame)
+                            }
                         }
-                    }
 
-                    continue
+                        continue
+                    }
+                    artifactSlugMap[appName] = gameSlug
+                    slugNamespaceCatalogItemIdMap[gameSlug] = namespace to catalogItemId
+                    // You need a placeholder because if not it won't get imported
+                    igdbCallMap[gameSlug] = 0L to convertEpicIdToString(namespace, catalogItemId)
+
                 }
-
-                artifactSlugMap[appName] = gameSlug
-                slugNamespaceCatalogItemIdMap[gameSlug] = namespace to catalogItemId
-                // You need a placeholder because if not it won't get imported
-                igdbCallMap[gameSlug] = 0L to convertEpicIdToString(namespace, catalogItemId)
             }
         } while (cursor != "") // Loop until cursor is gone
 
@@ -332,6 +340,7 @@ class EpicDataSource(
                     var sanitizedSlug =
                         getSlug(catalogResponse.getString("title").replace("\"", ""))
                     // add to both maps
+                    Log.d("EpicDataSource", "SANITIZED_TITLE: $sanitizedTitle")
 
                     (game.playTime to epicId).let {
                         newMap[sanitizedTitle] = it
@@ -515,6 +524,16 @@ class EpicDataSource(
             categoriesList.contains("plugins") ||
             categoriesList.contains("plugins/engine") ||
             categoriesList.contains("addons")
+        ) {
+            return true
+        }
+        val platforms =
+            catalogResponse.getJSONArray("releaseInfo").getJSONObject(0).getJSONArray("platform")
+        val platformString = platforms.join("").lowercase()
+        // if it's Android or iOS, skip
+        if (
+            platformString.contains("android") ||
+            platformString.contains("ios")
         ) {
             return true
         }

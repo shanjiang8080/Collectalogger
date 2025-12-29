@@ -74,6 +74,7 @@ import com.example.collectalogger2.R
 import com.example.collectalogger2.data.Game
 import com.example.collectalogger2.data.Genre
 import com.example.collectalogger2.data.datasource.EpicDataSource
+import com.example.collectalogger2.data.datasource.GogDataSource
 import com.example.collectalogger2.data.datasource.SteamDataSource
 import com.example.collectalogger2.util.PlayStatus
 import kotlin.math.floor
@@ -297,7 +298,7 @@ fun DetailScreenBody(
                             ) {
                                 // Display platforms owned and genre
                                 PlatformsOwnedBar(game)
-                                GenreCard(game, gameGenres, onSelectGalleryFilter)
+                                GenreCard(gameGenres, onSelectGalleryFilter)
 
                             }
 
@@ -371,7 +372,6 @@ fun FavoriteIcon(game: Game, toggleFavorite: () -> Unit) {
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
 private fun GenreCard(
-    game: Game,
     gameGenres: List<Genre>,
     onSelectGalleryFilter: (Int?, String?, String?, Boolean?, String?, String?) -> Unit
 ) {
@@ -509,7 +509,15 @@ fun PlatformsOwnedBar(game: Game) {
                             tint = MaterialTheme.colorScheme.secondary
                         )
                     }
-                    // TODO add a GOG icon thing
+                    if (GogDataSource.name in game.source) {
+                        // Display a GOG icon
+                        Icon(
+                            painter = painterResource(id = R.drawable.logo_gog),
+                            contentDescription = "GOG logo",
+                            modifier = Modifier.height(24.dp),
+                            tint = MaterialTheme.colorScheme.secondary
+                        )
+                    }
                 }
 
             }

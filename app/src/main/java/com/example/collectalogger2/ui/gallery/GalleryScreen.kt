@@ -194,10 +194,14 @@ fun GalleryScreenBody(
 
     if (dialogState != null) {
         when (dialogState!!) {
-            is DialogActionType.CheckNonImportedItems -> {
+            is CheckNonImportedItems -> {
                 // Nothing for now
                 // TODO create a composable to try to import them or ignore them
-                Log.i("GalleryScreen", "${(dialogState as CheckNonImportedItems).items}")
+                (dialogState as CheckNonImportedItems).items.forEach {
+                    it.value.forEach {
+                        Log.i("GalleryScreen", "Not imported: ${it.title}")
+                    }
+                }
             }
             is DialogActionType.LoggedOut -> {
                 // onDismiss is the same always, so define it here
