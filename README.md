@@ -5,3 +5,7 @@ Currently, we support Steam, Epic Games, and GOG.
 Game metadata (cover, description, genre, etc.) is sourced through IGDB.
 
 This is very much a WIP as of now.
+---
+![gallery](https://github.com/shanjiang8080/Collectalogger/blob/master/previewImages/gallery.png)
+![detail1](https://github.com/shanjiang8080/Collectalogger/blob/master/previewImages/detail1.png)
+![detail2](https://github.com/shanjiang8080/Collectalogger/blob/master/previewImages/detail2.png)
