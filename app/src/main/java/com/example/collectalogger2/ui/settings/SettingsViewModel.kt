@@ -1,5 +1,6 @@
 package com.example.collectalogger2.ui.settings
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -7,6 +8,7 @@ import com.example.collectalogger2.AppContainer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 
@@ -22,11 +24,24 @@ class SettingsViewModel(val container: AppContainer) : ViewModel() {
 
     init {
         viewModelScope.launch {
+            _steamId.value = container.settingsRepository.steamId.first()
+            _epicInfo.value = container.settingsRepository.epicIdInfo.first()
+            _gogUsername.value = container.settingsRepository.gogUsername.first()
+            Log.i("steamid_open", steamId.value)
+            Log.i("epicinfo_open", epicInfo.value)
+            Log.i("gogusername_open", gogUsername.value)
+
             container.settingsRepository.steamId.collect { id ->
                 _steamId.value = id
+                Log.i("steamid", id)
             }
             container.settingsRepository.epicIdInfo.collect { id ->
                 _epicInfo.value = id
+                Log.i("epicinfo", id)
+            }
+            container.settingsRepository.gogUsername.collect { id ->
+                _gogUsername.value = id
+                Log.i("gogusername", id)
             }
         }
     }
@@ -34,7 +49,6 @@ class SettingsViewModel(val container: AppContainer) : ViewModel() {
 
     /**
      * Saves the SteamID to the settings given an input URL.
-     * Returns true if successful, false if not.
      */
     fun saveSteamId(url: String) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -43,7 +57,6 @@ class SettingsViewModel(val container: AppContainer) : ViewModel() {
     }
     /**
      * Saves the Epic login info to the settings given the code.
-     * Returns true if successful, false if not.
      */
     fun saveEpicInfo(code: String) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -53,7 +66,6 @@ class SettingsViewModel(val container: AppContainer) : ViewModel() {
 
     /**
      * Saves the GOG username to the settings given the code.
-     * Returns true if successful, false if not.
      */
     fun saveGogUsername(username: String) {
         viewModelScope.launch(Dispatchers.IO) {

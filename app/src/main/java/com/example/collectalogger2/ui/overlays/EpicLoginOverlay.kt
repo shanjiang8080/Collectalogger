@@ -55,6 +55,7 @@ fun EpicOverlay(
 }
 
 class WebAppInterface(private val onContentReceived: (String) -> Unit) {
+    @Suppress("unused")
     @JavascriptInterface
     fun processHTML(html: String) {
         onContentReceived(html)

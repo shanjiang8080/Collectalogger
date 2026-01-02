@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -28,13 +29,13 @@ fun SettingsScreen(
     val gogUsername by viewModel.gogUsername.collectAsStateWithLifecycle()
     val activeStoreFront by viewModel.currentStoreFront.collectAsStateWithLifecycle()
 
-    Column() {
+    Column {
         Text(
             text = "Log in to services:", // TODO make XML-ized
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.onSurface
         )
-        Row() {
+        Row {
             // make buttons for each library, like Steam, Epic, etc.
             GameLibraryButton(
                 R.drawable.logo_steam,
@@ -81,14 +82,28 @@ fun GameLibraryButton(
     onClick: () -> Unit
 ) {
     // create a button with onclick and stuff
-    Button(
-        onClick = onClick,
-        enabled = true,
-        modifier = Modifier.size(width = 80.dp, height = 80.dp)
-    ) {
-        Icon(
-            painter = painterResource(icon),
-            contentDescription = description
+    if (isLoggedIn) {
+        Button(
+            onClick = onClick,
+            enabled = true,
+            modifier = Modifier.size(width = 80.dp, height = 80.dp),
+        ) {
+            Icon(
+                painter = painterResource(icon),
+                contentDescription = description,
             )
+        }
+    } else {
+        FilledTonalButton(
+            onClick = onClick,
+            enabled = true,
+            modifier = Modifier.size(width = 80.dp, height = 80.dp),
+        ) {
+            Icon(
+                painter = painterResource(icon),
+                contentDescription = description,
+            )
+        }
+
     }
 }

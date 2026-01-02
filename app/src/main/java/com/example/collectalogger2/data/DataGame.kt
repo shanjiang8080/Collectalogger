@@ -5,7 +5,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 /**
- * model class for a Game.
+ * Model class for a Game.
  * Currently, there are some missing fields, and the interface isn't quite right.
  * Still, it's good enough for now.
  */
@@ -13,44 +13,45 @@ import androidx.room.PrimaryKey
 data class Game(
     val title: String = "",
     @PrimaryKey(autoGenerate = true)
-    val id: Long = 0, // this is the normal id
+    val id: Long = 0, // The internal id
     // Sourced from IGDB but cached
     val description: String = "",
-    // Title, but excluding The and other articles
+    // Title excluding 'The' and other articles
     val sortingName: String = "",
-    // The platform the user has the game on (PC, PS5, Switch, etc).
-    // Later on, I'll add non-PC sources that will affect this.
+    // The platform the user has the game on (PC, PS5, Switch, etc)
     val platform: Set<String> = setOf(),
-    // The IGDB genre id.
+    // The IGDB genre id
     val genre: Set<Int> = setOf(),
     // The game libraries (can be multiple) that it is part of.
     val source: Set<String> = setOf(),
     // Play status (set manually)
     val status: String = "",
-    // The ID that IGDB uses. Of course, set by IGDB.
+    // The id used by IGDB
     val igdbId: Long = -1,
-    // The URL for IGDB cover.
+    // The URL for the IGDB cover
     val imageUrl: String = "",
-    // The URL for IGDB image background.
+    // The URL for the IGDB image background
     val backgroundUrl: String = "",
-    // the playTime, in minutes. (note that it's the playtime of the version with highest playtime...)
+    // The playtime of the version with highest number of minutes
     val playTime: Long = 0,
-    // adding a steamId for this
+    // Steam-specific id
     val steamId: Long = -1,
-    // and an epicId as well, though it's a string.
+    // Epic-specific id which is a string combining namespace and id
     @ColumnInfo(name = "epicId", defaultValue = "")
     val epicId: String = "",
+    // GOG-specific id
     @ColumnInfo(name = "gogId", defaultValue = "")
     val gogId: String = "",
-    // This is for IGDB screenshots
+    // List of IGDB screenshot URLs
     @ColumnInfo(name = "screenshots", defaultValue = "")
     val screenshots: List<String> = listOf(),
+    // List of developers according to IGDB
     @ColumnInfo(name = "developers", defaultValue = "")
     val developers: Set<String> = setOf(),
+    // List of publishers according to IGDB
     @ColumnInfo(name = "publishers", defaultValue = "")
     val publishers: Set<String> = setOf(),
-    // denotes if the game is a favorite
+    // Denotes if the game is a favorite
     @ColumnInfo(name = "isFavorite", defaultValue = "0")
     val isFavorite: Boolean = false,
-) {
-}
+)

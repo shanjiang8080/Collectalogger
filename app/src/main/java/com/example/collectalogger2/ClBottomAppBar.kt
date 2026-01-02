@@ -16,9 +16,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.navigation.compose.rememberNavController
 
-private class _destination(
+private class Destination(
     val onNavigate: () -> Unit,
     val name: String,
     val icon: ImageVector,
@@ -32,9 +31,9 @@ fun BottomAppBar(
 ) {
     var selectedDestination by rememberSaveable { mutableIntStateOf(1) /* whatever the gallery is */ }
     val destinations = listOf(
-        _destination(onNavigateToWishlist, "Wishlist", Icons.Rounded.ShoppingCart),
-        _destination(onNavigateToGallery, "Gallery", Icons.Rounded.Home),
-        _destination(onNavigateToSettings, "Settings", Icons.Rounded.Settings),
+        Destination(onNavigateToWishlist, "Wishlist", Icons.Rounded.ShoppingCart),
+        Destination(onNavigateToGallery, "Gallery", Icons.Rounded.Home),
+        Destination(onNavigateToSettings, "Settings", Icons.Rounded.Settings),
     )
     NavigationBar(
         windowInsets = NavigationBarDefaults.windowInsets

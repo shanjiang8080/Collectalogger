@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -169,8 +170,7 @@ fun DetailScreenBody(
             ) {
                 BackgroundImage(screenHeight, game)
 
-                Column(
-                ) {
+                Column {
                     // Contains things at the top (so, not description/images)
                     Column(
                         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -214,51 +214,21 @@ fun DetailScreenBody(
                                 .fillMaxWidth()
                         ) {
                             // For developers
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(5.dp)
-                            ) {
-                                game.developers.forEach { developer ->
-                                    SuggestionChip(
-                                        onClick = {
-                                            onSelectGalleryFilter(
-                                                null,
-                                                developer,
-                                                null,
-                                                null,
-                                                null,
-                                                null
-                                            )
-                                        },
-                                        label = { Text(
-                                            text = developer,
-                                            color = MaterialTheme.colorScheme.primary
-                                        ) }
-                                    )
-                                }
-                            }
+                            ChipListLabel(
+                                game.developers,
+                                onSelectGalleryFilter,
+                                iconPainter = painterResource(R.drawable.mic_developer),
+                                iconDescription = "Developer icon",
+                                isPublisher = false
+                            )
                             // For publishers
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(5.dp)
-                            ) {
-                                game.publishers.forEach { publisher ->
-                                    SuggestionChip(
-                                        onClick = {
-                                            onSelectGalleryFilter(
-                                                null,
-                                                null,
-                                                publisher,
-                                                null,
-                                                null,
-                                                null
-                                            )
-                                        },
-                                        label = { Text(
-                                            text = publisher,
-                                            color = MaterialTheme.colorScheme.primary
-                                        ) }
-                                    )
-                                }
-                            }
+                            ChipListLabel(
+                                game.publishers,
+                                onSelectGalleryFilter,
+                                iconPainter = painterResource(R.drawable.mic_publisher),
+                                iconDescription = "Publisher icon",
+                                isPublisher = true
+                            )
                         }
                         Column(
                             verticalArrangement = Arrangement.spacedBy(5.dp)
@@ -294,7 +264,9 @@ fun DetailScreenBody(
                             // Add owned libraries
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(5.dp),
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(IntrinsicSize.Min)
                             ) {
                                 // Display platforms owned and genre
                                 PlatformsOwnedBar(game)
@@ -315,8 +287,7 @@ fun DetailScreenBody(
                             modifier = Modifier
                                 .padding(10.dp)
                         ) {
-                            Column(
-                            ) {
+                            Column {
                                 TextLabel("Description")
                                 Text(
                                     text = game.description,
@@ -325,8 +296,7 @@ fun DetailScreenBody(
                                 )
                             }
                             // Add the carousel for screenshots
-                            Column(
-                            ) {
+                            Column {
                                 TextLabel("Images")
                                 ScreenshotCarousel(game)
                             }
@@ -343,10 +313,71 @@ fun DetailScreenBody(
 
         }
         when (currentDialog) {
-            "TimePlayed" -> { PlayTimeDialog(game.playTime, { setDialog("") })}
+            "TimePlayed" -> {
+                PlayTimeDialog(game.playTime) { setDialog("") }
+            }
             "PlayStatus" -> { PlayStatusDialog( game.status, { setDialog("") }, onEditPlayStatus) }
         }
 
+    }
+}
+
+@Composable
+@OptIn(ExperimentalLayoutApi::class)
+private fun ChipListLabel(
+    list: Set<String>,
+    onSelectGalleryFilter: (Int?, String?, String?, Boolean?, String?, String?) -> Unit,
+    iconPainter: Painter,
+    iconDescription: String?,
+    isPublisher: Boolean
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Icon(
+            painter = iconPainter,
+            contentDescription = iconDescription,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(20.dp)
+        )
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            verticalArrangement = Arrangement.spacedBy((-10).dp)
+        ) {
+            list.forEach { item ->
+                SuggestionChip(
+                    onClick = {
+                        if (isPublisher) {
+                            onSelectGalleryFilter(
+                                null,
+                                null,
+                                item,
+                                null,
+                                null,
+                                null
+                            )
+                        } else {
+                            onSelectGalleryFilter(
+                                null,
+                                item,
+                                null,
+                                null,
+                                null,
+                                null
+                            )
+                        }
+                    },
+                    label = {
+                        Text(
+                            text = item,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                )
+            }
+        }
     }
 }
 
@@ -379,6 +410,7 @@ private fun GenreCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.secondaryContainer
         ),
+        modifier = Modifier.fillMaxHeight()
     ) {
         Column(
             verticalArrangement = Arrangement.Top,
@@ -478,18 +510,19 @@ fun PlatformsOwnedBar(game: Game) {
                 .fillMaxHeight()
         ) {
             Column(
-                verticalArrangement = Arrangement.Top,
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .padding(10.dp, 7.dp, 10.dp, 10.dp)
             ) {
                 TextLabel(
                     text = "Owned on",
                     color = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 4.dp)
                 )
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    maxItemsInEachRow = 2
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(0.dp, 10.dp, 0.dp, 10.dp)
                 ) {
                     if (SteamDataSource.name in game.source) {
                         // Display a Steam icon
@@ -535,7 +568,7 @@ fun PlayStatusDialogPreview() {
 @Preview
 @Composable
 fun PlayTimeDialogPreview() {
-    PlayTimeDialog(3456, {})
+    PlayTimeDialog(3456) {}
 }
 
 @Composable
@@ -596,17 +629,18 @@ fun BigHighlightHorizontalLabel(
 ) {
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Bottom,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = textBig,
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.primary
+            style = MaterialTheme.typography.displayMedium,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold
         )
         Text(
             text = "  $textSmall",
             style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.primary
         )
     }
 }
@@ -719,12 +753,14 @@ fun DetailScreenPreview() {
         steamId = 2L,
         epicId = "a",
         developers = setOf("ConcernedApe"),
-        publishers = setOf("Chucklefish", "ConcernedApe"),
-        genre = setOf()
+        publishers = setOf("Chucklefish", "ConcernedApe", "Third Developer"),
+        genre = setOf(),
+        source = setOf(SteamDataSource.name, EpicDataSource.name)
     )
     val gameGenres = listOf(
         Genre("Indie", 0, 0),
         Genre("RPG", 0, 0),
+        Genre("Simulation", 0, 0),
         Genre("Simulation", 0, 0)
     )
     DetailScreenBody(
@@ -789,14 +825,14 @@ fun LabelIconCombo(
         Icon(
             painter = iconPainter,
             contentDescription = iconDescription,
-            tint = MaterialTheme.colorScheme.secondary
+            tint = MaterialTheme.colorScheme.onPrimaryContainer
         )
         Column {
-            TextLabel(text = textLabel, color = MaterialTheme.colorScheme.secondary)
+            TextLabel(text = textLabel, color = MaterialTheme.colorScheme.onPrimaryContainer)
             Text(
                 text = textValue,
                 style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
                 fontWeight = FontWeight.Black
             )
         }

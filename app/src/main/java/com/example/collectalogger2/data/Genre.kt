@@ -7,8 +7,8 @@ import androidx.room.PrimaryKey
 data class Genre(
     val name: String = "",
     @PrimaryKey(autoGenerate = true)
-    // The internal Id used for the database
+    // The internal id used for the database
     val id: Int = 0,
-    // the IGDB id. If a custom genre, it is a negative number (not just -1)
+    // The IGDB id, with custom genres being negative numbers (not just -1)
     val igdbId: Int = -1
 )

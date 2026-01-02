@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.example.collectalogger2.util.Converters
 
-// increase the version whenever you change the schema of the database table.
+// Increase the version whenever you change the schema of the database table
 @Database(
     entities = [Game::class, Genre::class],
     version = 2,
