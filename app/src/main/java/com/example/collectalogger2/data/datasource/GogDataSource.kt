@@ -6,7 +6,7 @@ import com.example.collectalogger2.data.datasource.GameEvent.ExpectedGamesCount
 import com.example.collectalogger2.data.datasource.GameEvent.FinishGamesCount
 import com.example.collectalogger2.data.datasource.GameEvent.GameLoaded
 import com.example.collectalogger2.util.AccountException
-import com.example.collectalogger2.util.GogSource
+import com.example.collectalogger2.util.libraryObjects.GogSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -87,6 +87,8 @@ class GogDataSource(var usernameFlow: Flow<String>, gameDao: GameDao) :
         }
 
         emit(FinishGamesCount)
+
+        // TODO emit non-imported games
     }
 
     override fun copyWithID(

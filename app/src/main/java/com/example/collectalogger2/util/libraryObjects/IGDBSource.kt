@@ -1,6 +1,8 @@
-package com.example.collectalogger2.util
+package com.example.collectalogger2.util.libraryObjects
 
 import com.example.collectalogger2.BuildConfig
+import com.example.collectalogger2.util.APIException
+import com.example.collectalogger2.util.APIStatusException
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
 import io.ktor.client.request.headers
@@ -56,8 +58,14 @@ object IGDBSource {
                 }.bodyAsText()
                 if (igdbResponse[0] != '[') {
                     // continue for other exception types
-                    if (igdbResponse.contains("429")) throw APIStatusException("Too Many Requests", 429)
-                    if (igdbResponse.contains("Forbidden")) throw APIStatusException("Forbidden", 403)
+                    if (igdbResponse.contains("429")) throw APIStatusException(
+                        "Too Many Requests",
+                        429
+                    )
+                    if (igdbResponse.contains("Forbidden")) throw APIStatusException(
+                        "Forbidden",
+                        403
+                    )
                     throw APIException("Did not return a JSON Array. Instead returned $igdbResponse")
                 }
             } catch (ex: Exception) {

@@ -17,6 +17,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.collectalogger2.R
 import com.example.collectalogger2.ui.overlays.EpicOverlay
 import com.example.collectalogger2.ui.overlays.GogOverlay
+import com.example.collectalogger2.ui.overlays.ItchOverlay
 import com.example.collectalogger2.ui.overlays.SteamOverlay
 
 // UPDATE WHEN ADDING LIBRARIES
@@ -27,6 +28,7 @@ fun SettingsScreen(
     val steamId by viewModel.steamId.collectAsStateWithLifecycle()
     val epicInfo by viewModel.epicInfo.collectAsStateWithLifecycle()
     val gogUsername by viewModel.gogUsername.collectAsStateWithLifecycle()
+    val itchSecret by viewModel.itchSecret.collectAsStateWithLifecycle()
     val activeStoreFront by viewModel.currentStoreFront.collectAsStateWithLifecycle()
 
     Column {
@@ -52,6 +54,11 @@ fun SettingsScreen(
                 "GOG button",
                 gogUsername.isEmpty()
             ) { viewModel.setStoreFront("GOG") }
+            GameLibraryButton(
+                R.drawable.logo_itch,
+                "Itch button",
+                itchSecret.isEmpty()
+            ) { viewModel.setStoreFront("Itch") }
         }
     }
     val onDismiss = { viewModel.setStoreFront("") }
@@ -67,6 +74,10 @@ fun SettingsScreen(
         "GOG" -> GogOverlay(
             onDismiss = onDismiss,
             saveGogUsername = { username -> viewModel.saveGogUsername(username) }
+        )
+        "Itch" -> ItchOverlay(
+            onDismiss = onDismiss,
+            saveItchSecret = { secret -> viewModel.saveItchSecret(secret) }
         )
         else -> {}
 

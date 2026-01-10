@@ -17,10 +17,12 @@ class SettingsViewModel(val container: AppContainer) : ViewModel() {
     private val _epicInfo = MutableStateFlow<String>("")
     private val _currentStoreFront = MutableStateFlow<String>("")
     private val _gogUsername = MutableStateFlow<String>("")
+    private val _itchSecret = MutableStateFlow<String>("")
     val currentStoreFront = _currentStoreFront.asStateFlow()
     val steamId = _steamId.asStateFlow()
     val epicInfo = _epicInfo.asStateFlow()
     val gogUsername = _gogUsername.asStateFlow()
+    val itchSecret = _itchSecret.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -70,6 +72,12 @@ class SettingsViewModel(val container: AppContainer) : ViewModel() {
     fun saveGogUsername(username: String) {
         viewModelScope.launch(Dispatchers.IO) {
             getGogLogin(username, container)
+        }
+    }
+
+    fun saveItchSecret(secret: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            getItchLogin(secret, container)
         }
     }
 

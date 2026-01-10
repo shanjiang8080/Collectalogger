@@ -42,6 +42,8 @@ data class Game(
     // GOG-specific id
     @ColumnInfo(name = "gogId", defaultValue = "")
     val gogId: String = "",
+    @ColumnInfo(name = "itchId", defaultValue = "")
+    val itchId: String = "",
     // List of IGDB screenshot URLs
     @ColumnInfo(name = "screenshots", defaultValue = "")
     val screenshots: List<String> = listOf(),

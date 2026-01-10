@@ -1,18 +1,14 @@
-package com.example.collectalogger2.util
+package com.example.collectalogger2.util.libraryObjects
 
 import com.example.collectalogger2.BuildConfig
+import com.example.collectalogger2.util.APIException
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
-import io.ktor.client.request.headers
 import io.ktor.client.request.get
-import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpMethod
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.json.JSONArray
 import org.json.JSONObject
 
 object SteamSource {

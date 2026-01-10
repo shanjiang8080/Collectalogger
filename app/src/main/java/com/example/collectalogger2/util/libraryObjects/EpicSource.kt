@@ -1,5 +1,6 @@
-package com.example.collectalogger2.util
+package com.example.collectalogger2.util.libraryObjects
 
+import com.example.collectalogger2.util.APIException
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
 import io.ktor.client.request.forms.submitForm

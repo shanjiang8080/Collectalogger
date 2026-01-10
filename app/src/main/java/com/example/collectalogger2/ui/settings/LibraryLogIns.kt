@@ -3,8 +3,8 @@ package com.example.collectalogger2.ui.settings
 import android.util.Log
 import com.example.collectalogger2.AppContainer
 import com.example.collectalogger2.util.APIException
-import com.example.collectalogger2.util.EpicSource
-import com.example.collectalogger2.util.SteamSource
+import com.example.collectalogger2.util.libraryObjects.EpicSource
+import com.example.collectalogger2.util.libraryObjects.SteamSource
 import org.json.JSONObject
 
 // These functions get the log in details for their respective libraries.
@@ -41,13 +41,20 @@ suspend fun getEpicLogin(code: String, container: AppContainer) {
 }
 
 suspend fun getGogLogin(username: String, container: AppContainer) {
-    val id: String
     try {
-        id = username // perhaps process this later
-        container.settingsRepository.saveGogUsername(id)
-        Log.i("GOG username saved!", id)
+        container.settingsRepository.saveGogUsername(username)
+        Log.i("GOG username saved!", username)
     } catch (e: Exception) {
         Log.e("Failed to save GOG username!", e.message ?: "")
+    }
+}
+
+suspend fun getItchLogin(secret: String, container: AppContainer) {
+    try {
+        container.settingsRepository.saveItchSecret(secret)
+        Log.i("Itch secret saved!", secret)
+    } catch (e: Exception) {
+        Log.e("Failed to save Itch secret!", e.message ?: "")
     }
 }
 

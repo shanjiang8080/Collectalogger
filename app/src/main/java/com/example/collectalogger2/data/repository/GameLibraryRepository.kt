@@ -125,6 +125,7 @@ class GameLibraryRepository(
     suspend fun updateGameLibraries() {
         var newGames = 0
         val missingGamesMap = mutableMapOf<String, List<Game>>()
+        Log.d("GameLibraryRepository", "Library data sources: $remoteLibraryDataSources")
         for (dataSource in remoteLibraryDataSources) {
             Log.d("GameLibraryRepository", "Starting import of ${dataSource.libraryName}")
             var retriesLeft = 3

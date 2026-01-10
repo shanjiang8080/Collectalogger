@@ -2,7 +2,7 @@ package com.example.collectalogger2.data.datasource
 
 import android.util.Log
 import com.example.collectalogger2.data.Genre
-import com.example.collectalogger2.util.IGDBSource
+import com.example.collectalogger2.util.libraryObjects.IGDBSource
 import org.json.JSONObject
 
 /**

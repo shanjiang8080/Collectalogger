@@ -10,7 +10,7 @@ import com.example.collectalogger2.data.datasource.GameEvent.IncrementGamesCount
 import com.example.collectalogger2.data.datasource.GameEvent.ListNonImportedGames
 import com.example.collectalogger2.util.AccountException
 import com.example.collectalogger2.util.AccountExpiryException
-import com.example.collectalogger2.util.EpicSource
+import com.example.collectalogger2.util.libraryObjects.EpicSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow

@@ -3,7 +3,7 @@ package com.example.collectalogger2.data.datasource
 import android.util.Log
 import com.example.collectalogger2.data.Game
 import com.example.collectalogger2.data.GameDao
-import com.example.collectalogger2.util.IGDBSource
+import com.example.collectalogger2.util.libraryObjects.IGDBSource
 import kotlinx.coroutines.flow.Flow
 import org.json.JSONArray
 import org.json.JSONObject

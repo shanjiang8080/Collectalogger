@@ -8,7 +8,7 @@ import com.example.collectalogger2.data.datasource.GameEvent.FinishGamesCount
 import com.example.collectalogger2.data.datasource.GameEvent.GameLoaded
 import com.example.collectalogger2.data.datasource.GameEvent.ListNonImportedGames
 import com.example.collectalogger2.util.AccountException
-import com.example.collectalogger2.util.SteamSource
+import com.example.collectalogger2.util.libraryObjects.SteamSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -90,6 +90,7 @@ class SteamDataSource(var userIdFlow: Flow<String>, gameDao: GameDao) : RemoteLi
         val missingGames = mutableListOf<Game>()
         steamIdMap.forEach { game ->
             missingGames.add(
+                // TODO there should be the game's title so it can be identified
                 Game(
                     steamId = game.key.toLong(),
                     playTime = game.value.first

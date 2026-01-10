@@ -76,6 +76,7 @@ import com.example.collectalogger2.data.Game
 import com.example.collectalogger2.data.Genre
 import com.example.collectalogger2.data.datasource.EpicDataSource
 import com.example.collectalogger2.data.datasource.GogDataSource
+import com.example.collectalogger2.data.datasource.ItchDataSource
 import com.example.collectalogger2.data.datasource.SteamDataSource
 import com.example.collectalogger2.util.PlayStatus
 import kotlin.math.floor
@@ -547,6 +548,15 @@ fun PlatformsOwnedBar(game: Game) {
                         Icon(
                             painter = painterResource(id = R.drawable.logo_gog),
                             contentDescription = "GOG logo",
+                            modifier = Modifier.height(24.dp),
+                            tint = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                    if (ItchDataSource.name in game.source) {
+                        // Display an Itch icon
+                        Icon(
+                            painter = painterResource(id = R.drawable.logo_itch),
+                            contentDescription = "Itch logo",
                             modifier = Modifier.height(24.dp),
                             tint = MaterialTheme.colorScheme.secondary
                         )
