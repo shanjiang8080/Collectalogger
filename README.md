@@ -1,10 +1,11 @@
 # Collectalogger
-This is an app that allows you to track game purchases across multiple libraries, by importing them. 
-Once imported, games can be viewed and searched through.
-Currently, we support Steam, Epic Games, and GOG.
+
+This is an app that allows you to track game purchases across multiple libraries by importing them
+from accounts.
+Once imported, games can be viewed, searched, and filtered, with playtime information.
+Currently, we support Steam, Epic Games, GOG, and Itch.io.
 Game metadata (cover, description, genre, etc.) is sourced through IGDB.
 
-This is very much a WIP as of now.
 ---
 ![gallery](https://github.com/shanjiang8080/Collectalogger/blob/master/previewImages/gallery.png)
 ![detail1](https://github.com/shanjiang8080/Collectalogger/blob/master/previewImages/detail1.png)
