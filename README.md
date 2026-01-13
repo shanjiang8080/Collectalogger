@@ -1,5 +1,6 @@
 # Collectalogger
 ![logo](https://github.com/shanjiang8080/Collectalogger/blob/master/previewImages/collectalogger_export.svg)
+
 This is an app that allows you to track game purchases across multiple libraries by importing them
 from accounts.
 Once imported, games can be viewed, searched, and filtered, with playtime information.
