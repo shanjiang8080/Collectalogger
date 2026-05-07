@@ -72,6 +72,7 @@ import com.example.collectalogger2.ui.gallery.DialogActionType.CheckNonImportedI
 import com.example.collectalogger2.ui.overlays.EpicOverlay
 import com.example.collectalogger2.ui.overlays.SteamOverlay
 import com.example.collectalogger2.util.Filter
+import com.example.collectalogger2.util.LocalNavEventBus
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 
@@ -89,6 +90,19 @@ fun GalleryScreen(
     }
     val allGenres by viewModel.allGameGenres.collectAsStateWithLifecycle()
     val loadPercentage by viewModel.loadPercentage.collectAsStateWithLifecycle()
+
+    // Go back to the top
+    val navBus = LocalNavEventBus.current
+
+    LaunchedEffect(navBus) {
+        navBus.scrollToTopEvent.collect { route ->
+            if (route == "Gallery") {
+                // 3. Perform the action
+                listState.animateScrollToItem(0)
+            }
+        }
+    }
+
     // eventually, the uiState can be changed by filters.
     // not now, though.
     GalleryScreenBody(

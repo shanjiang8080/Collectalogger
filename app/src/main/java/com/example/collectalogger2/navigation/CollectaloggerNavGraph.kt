@@ -3,6 +3,7 @@ package com.example.collectalogger2.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -27,6 +28,8 @@ import com.example.collectalogger2.ui.settings.SettingsViewModelFactory
 import com.example.collectalogger2.ui.wishlist.WishListScreen
 import com.example.collectalogger2.ui.wishlist.WishListViewModel
 import com.example.collectalogger2.ui.wishlist.WishListViewModelFactory
+import com.example.collectalogger2.util.LocalNavEventBus
+import com.example.collectalogger2.util.NavEventBus
 import kotlinx.serialization.Serializable
 
 // Routes
@@ -65,109 +68,132 @@ fun CollectaloggerNavGraph(
     navController: NavHostController = rememberNavController(),
 ) {
     val appContainer = (LocalContext.current.applicationContext as CollectaloggerApplication).container
-
-    Scaffold(
-        bottomBar = { BottomAppBar(
-            onNavigateToGallery = {
-                navController.navigate(route = Gallery()) {
-                    launchSingleTop = true
-                }
-            },
-            onNavigateToWishlist = { navController.navigate(route = WishList) {launchSingleTop = true} },
-            onNavigateToSettings = { navController.navigate(route = Settings) {launchSingleTop = true} },
-        ) }
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = Gallery(),
-            modifier = Modifier.padding(innerPadding)
-        ) {
-            composable<Gallery> { backStackEntry ->
-                val factory = remember {
-                    GalleryViewModelFactory(
-                        appContainer,
-                        backStackEntry,
-                        backStackEntry.arguments
-                    )
-                }
-                val galleryViewModel: GalleryViewModel = viewModel(backStackEntry, factory = factory)
-                GalleryScreen(
-                    viewModel = galleryViewModel,
-                    onNavigateToDetail = { id -> navController.navigate(route = DetailView(id)) }
+    val navBus = remember { NavEventBus() }
+    CompositionLocalProvider(LocalNavEventBus provides navBus) {
+        Scaffold(
+            bottomBar = {
+                BottomAppBar(
+                    onNavigateToGallery = {
+                        navController.navigate(route = Gallery()) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToWishlist = {
+                        navController.navigate(route = WishList) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToSettings = {
+                        navController.navigate(route = Settings) {
+                            launchSingleTop = true
+                        }
+                    },
                 )
             }
-            composable<WishList> { backStackEntry ->
-                val factory = remember { WishListViewModelFactory(appContainer) }
-                val wishListViewModel: WishListViewModel = viewModel(backStackEntry, factory = factory)
-                WishListScreen(
-                    viewModel = wishListViewModel
-                )
-            }
-            composable<Settings> { backStackEntry ->
-                val factory = remember { SettingsViewModelFactory(appContainer) }
-                val settingsViewModel: SettingsViewModel = viewModel(backStackEntry, factory = factory)
-                SettingsScreen(
-                    viewModel = settingsViewModel
-                )
-            }
-
-            navigation<Detail>(startDestination = DetailView::class) {
-
-
-                composable<DetailView> { backStackEntry ->
-                    val parentEntry = remember(backStackEntry) {
-                        navController.getBackStackEntry(Detail)
-                    }
+        ) { innerPadding ->
+            NavHost(
+                navController = navController,
+                startDestination = Gallery(),
+                modifier = Modifier.padding(innerPadding)
+            ) {
+                composable<Gallery> { backStackEntry ->
                     val factory = remember {
-                        DetailViewModelFactory(
+                        GalleryViewModelFactory(
                             appContainer,
-                            parentEntry,
-                            parentEntry.arguments
+                            backStackEntry,
+                            backStackEntry.arguments
                         )
                     }
-                    val detailViewModel: DetailViewModel = viewModel(parentEntry, factory = factory)
-                    DetailScreen(
-                        viewModel = detailViewModel,
-                        onNavigateBack = { navController.popBackStack() },
-                        onEditPlayStatus = { it -> detailViewModel.editPlayStatus(it) },
-                        onSelectGalleryFilter = {
-                                genre: Int?,
-                                developer: String?,
-                                publisher: String?,
-                                isFavorite: Boolean?,
-                                library: String?,
-                                platform: String?,
-                            ->
-                            navController.navigate(
-                                route = Gallery(
-                                    genre,
-                                    developer,
-                                    publisher,
-                                    isFavorite,
-                                    library,
-                                    platform
-                                )
+                    val galleryViewModel: GalleryViewModel =
+                        viewModel(backStackEntry, factory = factory)
+                    GalleryScreen(
+                        viewModel = galleryViewModel,
+                        onNavigateToDetail = { id -> navController.navigate(route = DetailView(id)) }
+                    )
+                }
+                composable<WishList> { backStackEntry ->
+                    val factory = remember { WishListViewModelFactory(appContainer) }
+                    val wishListViewModel: WishListViewModel =
+                        viewModel(backStackEntry, factory = factory)
+                    WishListScreen(
+                        viewModel = wishListViewModel
+                    )
+                }
+                composable<Settings> { backStackEntry ->
+                    val factory = remember { SettingsViewModelFactory(appContainer) }
+                    val settingsViewModel: SettingsViewModel =
+                        viewModel(backStackEntry, factory = factory)
+                    SettingsScreen(
+                        viewModel = settingsViewModel
+                    )
+                }
+
+                navigation<Detail>(startDestination = DetailView::class) {
+
+
+                    composable<DetailView> { backStackEntry ->
+                        val parentEntry = remember(backStackEntry) {
+                            navController.getBackStackEntry(Detail)
+                        }
+                        val factory = remember {
+                            DetailViewModelFactory(
+                                appContainer,
+                                parentEntry,
+                                parentEntry.arguments
                             )
-                        },
-                        onSelectEditScreen = { id -> navController.navigate(route = DetailEdit(id)) }
-                    )
-                }
-                composable<DetailEdit> { backStackEntry ->
-                    val parentEntry = remember(backStackEntry) {
-                        navController.getBackStackEntry(Detail)
-                    }
-                    val factory = remember {
-                        DetailViewModelFactory(
-                            appContainer,
-                            parentEntry,
-                            parentEntry.arguments
+                        }
+                        val detailViewModel: DetailViewModel =
+                            viewModel(parentEntry, factory = factory)
+                        DetailScreen(
+                            viewModel = detailViewModel,
+                            onNavigateBack = { navController.popBackStack() },
+                            onEditPlayStatus = { it -> detailViewModel.editPlayStatus(it) },
+                            onSelectGalleryFilter = {
+                                    genre: Int?,
+                                    developer: String?,
+                                    publisher: String?,
+                                    isFavorite: Boolean?,
+                                    library: String?,
+                                    platform: String?,
+                                ->
+                                navController.navigate(
+                                    route = Gallery(
+                                        genre,
+                                        developer,
+                                        publisher,
+                                        isFavorite,
+                                        library,
+                                        platform
+                                    )
+                                )
+                            },
+                            onSelectEditScreen = { id ->
+                                navController.navigate(
+                                    route = DetailEdit(
+                                        id
+                                    )
+                                )
+                            }
                         )
                     }
-                    val detailViewModel: DetailViewModel = viewModel(parentEntry, factory = factory)
-                    DetailEditScreen(
-                        viewModel = detailViewModel,
-                        onNavigateBack = { navController.popBackStack() }
-                    )
+                    composable<DetailEdit> { backStackEntry ->
+                        val parentEntry = remember(backStackEntry) {
+                            navController.getBackStackEntry(Detail)
+                        }
+                        val factory = remember {
+                            DetailViewModelFactory(
+                                appContainer,
+                                parentEntry,
+                                parentEntry.arguments
+                            )
+                        }
+                        val detailViewModel: DetailViewModel =
+                            viewModel(parentEntry, factory = factory)
+                        DetailEditScreen(
+                            viewModel = detailViewModel,
+                            onNavigateBack = { navController.popBackStack() }
+                        )
+                    }
                 }
             }
         }
