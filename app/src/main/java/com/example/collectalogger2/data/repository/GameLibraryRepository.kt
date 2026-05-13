@@ -267,7 +267,7 @@ class GameLibraryRepository(
         // either emit the missingGamesMap or the number of games
         if (missingGamesMap.isNotEmpty()) {
             _eventFlow.emit(ShowMissingGames(missingGamesMap))
-        } else {
+        } else if (newGames != 0) { // Don't tell if nothing happens
             _eventFlow.emit(ShowInfoMessage("Imported $newGames new games"))
         }
         _eventFlow.emit(ShowLoadingFinished)

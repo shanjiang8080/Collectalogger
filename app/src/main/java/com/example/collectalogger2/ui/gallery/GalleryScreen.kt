@@ -151,8 +151,6 @@ fun GalleryScreenBody(
     val snackbarHostState = remember { SnackbarHostState() }
 
     var dialogState by remember { mutableStateOf<DialogActionType?>(null) }
-    // To handle loading, and also disable the refresh button
-    var loading by remember { mutableStateOf(false) }
 
     // Dunno where to put this
     LaunchedEffect(Unit) {
@@ -199,7 +197,7 @@ fun GalleryScreenBody(
 
                 }
                 is UiEvent.LoadingFinished -> {
-                    loading = false
+
                 }
             }
         }
@@ -236,7 +234,7 @@ fun GalleryScreenBody(
 
     Scaffold(
         topBar = {
-            if (loading && loadPercentage != -1f) {
+            if (loadPercentage != -1f) {
                 LinearProgressIndicator(
                     color = MaterialTheme.colorScheme.primary,
                     progress = { loadPercentage },
@@ -248,12 +246,7 @@ fun GalleryScreenBody(
             SnackbarHost(hostState = snackbarHostState)
         },
         floatingActionButton = {
-            FloatingRefreshButton({
-                updateGames(); loading = true; Log.d(
-                "GalleryScreen",
-                "Loading button pressed!"
-            )
-            }, loading)
+            FloatingRefreshButton({ updateGames() }, loadPercentage != -1f)
         }
     ) {
         Column {

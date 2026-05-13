@@ -104,6 +104,7 @@ dependencies {
     implementation(libs.ktor.client.core.v150)
     implementation(libs.ktor.client.serialization.jvm)
     implementation(libs.ktor.client.logging)
+    implementation(libs.androidx.work.runtime.ktx)
 
     // room persisting
     val roomVersion = "2.7.1" // or latest stable
