@@ -43,6 +43,7 @@ fun EpicOverlay(
                     override fun onPageFinished(view: WebView?, url: String?) {
                         if (url?.contains("epicgames.com/account/personal") == true) {
                             view?.loadUrl("https://www.epicgames.com/id/api/redirect?clientId=34a02cf8f4414e29b15921876da36f9a&responseType=code")
+                            view?.alpha = 0f
                         } else if (url?.contains("epicgames.com/id/api/redirect") == true) {
                             loadUrl("javascript:window.HTMLOUT.processHTML(document.documentElement.outerHTML)")
                         }
