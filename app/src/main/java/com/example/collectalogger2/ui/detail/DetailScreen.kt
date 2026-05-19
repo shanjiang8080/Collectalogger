@@ -2,7 +2,6 @@ package com.example.collectalogger2.ui.detail
 
 import android.annotation.SuppressLint
 import android.util.Log
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -66,7 +65,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -78,6 +76,8 @@ import com.example.collectalogger2.data.datasource.EpicDataSource
 import com.example.collectalogger2.data.datasource.GogDataSource
 import com.example.collectalogger2.data.datasource.ItchDataSource
 import com.example.collectalogger2.data.datasource.SteamDataSource
+import com.example.collectalogger2.ui.shared.BackgroundArt
+import com.example.collectalogger2.ui.shared.CoverArt
 import com.example.collectalogger2.util.PlayStatus
 import kotlin.math.floor
 
@@ -169,7 +169,13 @@ fun DetailScreenBody(
             Surface(
                 color = MaterialTheme.colorScheme.surfaceContainer
             ) {
-                BackgroundImage(screenHeight, game)
+                BackgroundArt(
+                    game = game,
+                    modifier = Modifier
+                        .height(screenHeight / 3.5f)
+                        .fillMaxWidth()
+                        .blur(5.dp) // NOTE: Only works on Android 12+
+                )
 
                 Column {
                     // Contains things at the top (so, not description/images)
@@ -182,9 +188,15 @@ fun DetailScreenBody(
                         Row(
                             verticalAlignment = Alignment.Bottom,
                         ) {
-                            CoverArt(game, screenWidth, Modifier
-                                .padding(top = screenHeight / 11, start = 15.dp)
-                                .wrapContentSize(unbounded = true, align = Alignment.TopStart)
+                            CoverArt(
+                                game = game,
+                                modifier = Modifier
+                                    .padding(top = screenHeight / 11, start = 15.dp)
+                                    .wrapContentSize(unbounded = true, align = Alignment.TopStart)
+                                    .height(screenWidth / 1.875f)
+                                    .width(screenWidth / 2.5f)
+                                    .clip(RoundedCornerShape(15.dp)),
+                                displayText = false
                             )
 
                             Card(
@@ -383,7 +395,7 @@ private fun ChipListLabel(
 }
 
 @Composable
-fun FavoriteIcon(game: Game, toggleFavorite: () -> Unit) {
+private fun FavoriteIcon(game: Game, toggleFavorite: () -> Unit) {
     IconButton(onClick = toggleFavorite) {
         if (game.isFavorite) {
             Icon(
@@ -501,7 +513,7 @@ private fun ScreenshotCarousel(game: Game) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun PlatformsOwnedBar(game: Game) {
+private fun PlatformsOwnedBar(game: Game) {
     if (game.source.isNotEmpty()) {
         Card(
             colors = CardDefaults.cardColors(
@@ -571,18 +583,18 @@ fun PlatformsOwnedBar(game: Game) {
 
 @Preview
 @Composable
-fun PlayStatusDialogPreview() {
+private fun PlayStatusDialogPreview() {
     PlayStatusDialog(PlayStatus.Beaten, {}, {})
 }
 
 @Preview
 @Composable
-fun PlayTimeDialogPreview() {
+private fun PlayTimeDialogPreview() {
     PlayTimeDialog(3456) {}
 }
 
 @Composable
-fun PlayTimeDialog(
+private fun PlayTimeDialog(
     time: Long,
     onDismiss: () -> Unit
 ) {
@@ -633,7 +645,7 @@ fun PlayTimeDialog(
 }
 
 @Composable
-fun BigHighlightHorizontalLabel(
+private fun BigHighlightHorizontalLabel(
     textBig: String,
     textSmall: String
 ) {
@@ -656,7 +668,7 @@ fun BigHighlightHorizontalLabel(
 }
 
 @Composable
-fun PlayStatusDialog(
+private fun PlayStatusDialog(
     gameStatus: String,
     onDismiss: () -> Unit,
     onEditPlayStatus: (String) -> Unit
@@ -751,7 +763,7 @@ fun PlayStatusDialog(
 
 @Preview(widthDp = 320,heightDp = 800)
 @Composable
-fun DetailScreenPreview() {
+private fun DetailScreenPreview() {
     val game = Game(
         title = "Stardew Valley",
         description = "Stardew Valley is an open-ended country-life RPG! You’ve inherited your grandfather’s old farm plot in Stardew Valley. Armed with hand-me-down tools and a few coins, you set out to begin your new life. Can you learn to live off the land and turn these overgrown fields into a thriving home? It won’t be easy. Ever since Joja Corporation came to town, the old ways of life have all but disappeared. The community center, once the town’s most vibrant hub of activity, now lies in shambles. But the valley seems full of opportunity. With a little dedication, you might just be the one to restore Stardew Valley to greatness!",
@@ -787,33 +799,7 @@ fun DetailScreenPreview() {
 }
 
 @Composable
-fun BackgroundImage(
-    screenHeight: Dp,
-    game: Game
-) {
-    val imageModifier = Modifier
-        .height(screenHeight / 3.5f)
-        .fillMaxWidth()
-        .blur(5.dp) // NOTE: Only works on Android 12+
-    if (game.backgroundUrl != "") {
-        AsyncImage(
-            model = game.backgroundUrl,
-            contentDescription = "Background art of ${game.title}",
-            contentScale = ContentScale.Crop,
-            modifier = imageModifier
-        )
-    } else {
-        Image(
-            painter = painterResource(id = R.drawable.background_placeholder),
-            contentDescription = "Placeholder background",
-            contentScale = ContentScale.Crop,
-            modifier = imageModifier
-        )
-    }
-}
-
-@Composable
-fun LabelIconCombo(
+private fun LabelIconCombo(
     iconPainter: Painter,
     iconDescription: String,
     textLabel: String,
@@ -850,28 +836,6 @@ fun LabelIconCombo(
 }
 
 
-@Composable
-fun CoverArt(game: Game, deviceWidth: Dp, modifier: Modifier = Modifier) {
-    val imageModifier = modifier
-        .height(deviceWidth / 1.875f)
-        .width(deviceWidth / 2.5f)
-        .clip(RoundedCornerShape(15.dp))
-    if (game.imageUrl != "") {
-        AsyncImage(
-            model = game.imageUrl,
-            contentDescription = "Cover image",
-            modifier = imageModifier,
-            contentScale = ContentScale.Fit
-        )
-    } else {
-        Image(
-            painter = painterResource(id = R.drawable.not_found),
-            contentDescription = "Placeholder cover",
-            modifier = imageModifier,
-            contentScale = ContentScale.Fit
-        )
-    }
-}
 @Composable
 private fun choosePlayStatusIcon(game: Game): Painter {
     return when (game.status) {

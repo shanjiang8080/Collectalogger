@@ -1,12 +1,13 @@
 package com.example.collectalogger2.ui.detail
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,12 +15,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,15 +40,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
 import com.example.collectalogger2.R
 import com.example.collectalogger2.data.Game
 import com.example.collectalogger2.data.Genre
+import com.example.collectalogger2.ui.shared.AnnotatedButton
+import com.example.collectalogger2.ui.shared.BackgroundArt
+import com.example.collectalogger2.ui.shared.CoverArt
 import com.example.collectalogger2.util.PlayStatus
 
 @Composable
@@ -123,64 +129,93 @@ fun DetailEditScreenBody(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .padding(innerPadding)
-                .padding(10.dp)
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
         ) {
-            Row(
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.Top
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.TopCenter
             ) {
-                // TODO this kinda sucks right now, i will fix this later
-                CoverReplace(
-                    game = game
+                // 1. The background sets the baseline height
+                val coverHeight = LocalConfiguration.current.screenHeightDp.dp / 3.5f
+                BackgroundArt(
+                    game = game,
+                    modifier = Modifier
+                        .height(coverHeight)
+                        .fillMaxWidth()
+                        .blur(5.dp)
                 )
 
+                // 2. The Column sits inside the Box, aligned to the top center
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.padding(10.dp, 0.dp, 0.dp, 0.dp)
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = (coverHeight / 2f))
                 ) {
+                    CoverArt(
+                        game = game,
+                        modifier = Modifier
+                            .height(coverHeight)
+                            .clip(RoundedCornerShape(15.dp)),
+                        displayText = false,
+                    )
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.mic_title),
-                            contentDescription = "Title"
-                        )
-                        TextField(
-                            value = titleState,
-                            onValueChange = { titleState = it },
-                            label = { Text("Title") },
-                            textStyle = MaterialTheme.typography.headlineSmall.copy(color = MaterialTheme.colorScheme.onSurface),
-                            modifier = Modifier
-                                .widthIn(488.dp)
-                        )
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.mic_sortingname),
-                            contentDescription = "Sorting name"
-                        )
-                        TextField(
-                            value = sortingNameState,
-                            onValueChange = { sortingNameState = it },
-                            label = { Text("Sorting Name") },
-                            modifier = Modifier
-                                .widthIn(488.dp)
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    AnnotatedButton(
+                        onClick = {},
+                        iconPainter = painterResource(id = R.drawable.mic_image),
+                        label = "Edit Cover",
+                        colors = ButtonDefaults.filledTonalButtonColors()
+                    )
                 }
-                // TODO have an image of the cover which you can change at some point
-                // also elsewhere have an image of the background which you can change
             }
+
+            Column(
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.padding(10.dp, 10.dp, 10.dp, 0.dp)
+            ) {
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.mic_title),
+                        contentDescription = "Title"
+                    )
+                    TextField(
+                        value = titleState,
+                        onValueChange = { titleState = it },
+                        label = { Text("Title") },
+                        textStyle = MaterialTheme.typography.headlineSmall.copy(color = MaterialTheme.colorScheme.onSurface),
+                        modifier = Modifier
+                            .widthIn(488.dp)
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.mic_sortingname),
+                        contentDescription = "Sorting name"
+                    )
+                    TextField(
+                        value = sortingNameState,
+                        onValueChange = { sortingNameState = it },
+                        label = { Text("Sorting Name") },
+                        modifier = Modifier
+                            .widthIn(488.dp)
+                    )
+                }
+            }
+            // TODO have an image of the background which you can change at some point
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.padding(10.dp, 0.dp, 10.dp, 0.dp)
             ) {
                 Icon(
                     painter = painterResource(id = R.drawable.mic_info),
@@ -201,7 +236,8 @@ fun DetailEditScreenBody(
             // have a list of text fields for developer/publisher
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.padding(10.dp, 0.dp, 10.dp, 0.dp)
             ) {
                 Icon(
                     painter = painterResource(id = R.drawable.mic_developer),
@@ -216,7 +252,8 @@ fun DetailEditScreenBody(
             // have a list of text fields for developer/publisher
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.padding(10.dp, 0.dp, 10.dp, 0.dp)
             ) {
                 Icon(
                     painter = painterResource(id = R.drawable.mic_publisher),
@@ -229,10 +266,15 @@ fun DetailEditScreenBody(
             }
 
             // have chips for genre, with X on them and the ability to add more with a button
-            GenreChips(genreState, allGameGenres, { genreState = it })
+            GenreChips(
+                genres = genreState,
+                allGenres = allGameGenres,
+                onValueChange = { genreState = it },
+                modifier = Modifier.padding(10.dp, 0.dp, 10.dp, 0.dp)
+            )
 
             // have a big "submit" button that saves changes and calls stuff to the database
-            Button(
+            AnnotatedButton(
                 onClick = {
                     onSubmitChanges(
                         titleState,
@@ -242,39 +284,14 @@ fun DetailEditScreenBody(
                         publisherState.toSet(),
                         genreState
                     )
-                }
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.mic_save),
-                        contentDescription = "Save"
-                    )
-                    Text("Save")
-                }
-            }
+                },
+                iconPainter = painterResource(R.drawable.mic_save),
+                label = "Save"
+            )
         }
     }
 }
 
-@Composable
-fun CoverReplace(game: Game) {
-    if (game.imageUrl != "") {
-        AsyncImage(
-            model = game.imageUrl,
-            contentDescription = "Cover image",
-            contentScale = ContentScale.Fit
-        )
-    } else {
-        Image(
-            painter = painterResource(id = R.drawable.not_found),
-            contentDescription = "Placeholder cover",
-            contentScale = ContentScale.Fit
-        )
-    }
-
-}
 
 @Composable
 private fun SetItemCombo(
@@ -342,11 +359,13 @@ private fun SetItemCombo(
 private fun GenreChips(
     genres: List<Genre>,
     allGenres: List<Genre>,
-    onValueChange: (List<Genre>) -> Unit
+    onValueChange: (List<Genre>) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = modifier
     ) {
         Icon(
             painter = painterResource(id = R.drawable.mic_tag),
@@ -407,8 +426,7 @@ private fun GenreChips(
                     }
                 },
                 modifier = Modifier
-                    .width(300.dp)
-                    .widthIn(100.dp, 400.dp),
+                    .fillMaxWidth(),
                 label = { Text("Add genre") }
             )
         }
@@ -417,7 +435,7 @@ private fun GenreChips(
 
 @Preview
 @Composable
-fun DetailEditScreenPreview() {
+private fun DetailEditScreenPreview() {
     val game = Game(
         title = "Stardew Valley",
         description = "Stardew Valley is an open-ended country-life RPG! You’ve inherited your grandfather’s old farm plot in Stardew Valley. Armed with hand-me-down tools and a few coins, you set out to begin your new life. Can you learn to live off the land and turn these overgrown fields into a thriving home? It won’t be easy. Ever since Joja Corporation came to town, the old ways of life have all but disappeared. The community center, once the town’s most vibrant hub of activity, now lies in shambles. But the valley seems full of opportunity. With a little dedication, you might just be the one to restore Stardew Valley to greatness!",
@@ -439,5 +457,46 @@ fun DetailEditScreenPreview() {
     )
     DetailEditScreenBody(
         game, gameGenres, listOf(), {}, { it1, it2, it3, it4, it5, it6 -> }
+    )
+}
+
+@Preview(
+    widthDp = 300,
+    heightDp = 500
+)
+@Composable
+private fun DetailEditScreenPreviewDiffScreen() {
+    val game = Game(
+        title = "Stardew Valley",
+        description = "Stardew Valley is an open-ended country-life RPG! You’ve inherited your grandfather’s old farm plot in Stardew Valley. Armed with hand-me-down tools and a few coins, you set out to begin your new life. Can you learn to live off the land and turn these overgrown fields into a thriving home? It won’t be easy. Ever since Joja Corporation came to town, the old ways of life have all but disappeared. The community center, once the town’s most vibrant hub of activity, now lies in shambles. But the valley seems full of opportunity. With a little dedication, you might just be the one to restore Stardew Valley to greatness!",
+        sortingName = "Stardew Valley",
+        status = PlayStatus.Beaten,
+        imageUrl = "",
+        backgroundUrl = "",
+        playTime = 22255,
+        steamId = 2L,
+        epicId = "a",
+        developers = setOf("ConcernedApe", "Support Studio"),
+        publishers = setOf("Chucklefish", "ConcernedApe"),
+        genre = setOf()
+    )
+    val gameGenres = listOf(
+        Genre("Indie", 0, 0),
+        Genre("RPG", 0, 0),
+        Genre("Simulation", 0, 0)
+    )
+    DetailEditScreenBody(
+        game, gameGenres, listOf(), {}, { it1, it2, it3, it4, it5, it6 -> }
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun GenreChipsPreview() {
+    GenreChips(
+        genres = listOf(Genre("what"), Genre("how"), Genre("when")),
+        allGenres = listOf(Genre("what"), Genre("how"), Genre("when")),
+        onValueChange = {},
+        modifier = Modifier
     )
 }

@@ -30,6 +30,8 @@ data class Game(
     val igdbId: Long = -1,
     // The URL for the IGDB cover
     val imageUrl: String = "",
+    // A custom cover icon (filename) the user can give the game
+    val customCover: String = "",
     // The URL for the IGDB image background
     val backgroundUrl: String = "",
     // The playtime of the version with highest number of minutes

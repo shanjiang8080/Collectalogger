@@ -2,14 +2,11 @@ package com.example.collectalogger2.ui.gallery
 
 import android.annotation.SuppressLint
 import android.util.Log
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -58,19 +55,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Color.Companion.Black
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
 import com.example.collectalogger2.R
 import com.example.collectalogger2.data.Game
 import com.example.collectalogger2.data.Genre
 import com.example.collectalogger2.ui.gallery.DialogActionType.CheckNonImportedItems
 import com.example.collectalogger2.ui.overlays.EpicOverlay
 import com.example.collectalogger2.ui.overlays.SteamOverlay
+import com.example.collectalogger2.ui.shared.CoverArt
 import com.example.collectalogger2.util.Filter
 import com.example.collectalogger2.util.LocalNavEventBus
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -552,45 +547,25 @@ fun FloatingRefreshButton(onClick: () -> Unit, loading: Boolean) {
 }
 
 @Composable
-fun GalleryGame(
+private fun GalleryGame(
     game: Game,
     onNavigateToDetail: (id: Long) -> Unit,
 ) {
-    val gameModifier = Modifier
-        .clickable(onClick = { onNavigateToDetail(game.id) })
-    if (game.imageUrl != "") {
-        AsyncImage(
-            model = game.imageUrl,
-            contentDescription = game.title,
-            // add modifier = Modifier.clickable
-            // to make it work!
-            modifier = gameModifier.aspectRatio(0.75f),
-
-        )
-    } else {
-        Box(
-            modifier = gameModifier,
-            contentAlignment = Alignment.Center
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.not_found),
-                contentDescription = game.title,
-                contentScale = ContentScale.FillBounds,
-                modifier = Modifier.aspectRatio(0.75f)
-            )
-            Text(text = game.title, color = Black)
-        }
-    }
+    CoverArt(
+        game = game,
+        modifier = Modifier.clickable(onClick = { onNavigateToDetail(game.id) })
+    )
 }
 
 @Preview(widthDp = 400,heightDp = 800)
 @Composable
-fun GalleryPreview() {
+private fun GalleryPreview() {
     var uiState = GalleryUiState(games = listOf(
         Game("Rogue Legacy II"),
         Game("Stardew Valley"),
         Game("Celeste"),
-        Game("Super Meat Boy")
+        Game("Super Meat Boy"),
+        Game("Yeah! You Want \"Those Games\", Right? So Here You Go! Now, Let's See You Clear Them!\n")
     ))
 
     GalleryScreenBody(
@@ -609,12 +584,3 @@ fun GalleryPreview() {
         loadPercentage = -1f
     )
 }
-@Preview(
-    showBackground = true
-)
-@Composable
-fun GalleryGameNoImagePreview() {
-    val game = Game("Rogue Legacy II", 19)
-    GalleryGame(game, {})
-}
-
