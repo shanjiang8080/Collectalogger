@@ -1,5 +1,7 @@
 package com.example.collectalogger2.ui.detail
 
+import android.content.Context
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import androidx.lifecycle.AbstractSavedStateViewModelFactory
@@ -10,10 +12,14 @@ import androidx.savedstate.SavedStateRegistryOwner
 import com.example.collectalogger2.AppContainer
 import com.example.collectalogger2.data.Game
 import com.example.collectalogger2.data.Genre
+import com.example.collectalogger2.util.getExtensionFromUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 
 class DetailViewModel(val container: AppContainer, savedStateHandle: SavedStateHandle) : ViewModel() {
     private val _game = MutableStateFlow<Game?>(null)
@@ -90,6 +96,54 @@ class DetailViewModel(val container: AppContainer, savedStateHandle: SavedStateH
                     genre = newGenres.toSet()
                 )
             )
+        }
+    }
+
+    suspend fun saveUriToInternalStorage(context: Context, uri: Uri, game: Game): File? {
+        return withContext(Dispatchers.IO) {
+            try {
+                // Remove the old file if it exists
+                if (!game.customCover.isEmpty()) {
+                    val oldFile = File(game.customCover)
+                    if (oldFile.exists() && oldFile.isFile) {
+                        oldFile.delete()
+                    }
+                }
+
+                val uniqueFileName = "picked_image_${game.id}.${getExtensionFromUri(context, uri)}"
+                // Make a subdirectory for clean file hierarchy
+                val coversDir = File(context.filesDir, "covers")
+                if (!coversDir.exists()) {
+                    coversDir.mkdirs()
+                }
+                val destinationFile = File(coversDir, uniqueFileName)
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    FileOutputStream(destinationFile).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                // Update the game so that the custom cover appears
+                container.gameLibraryRepository.updateGame(game.copy(customCover = destinationFile.absolutePath))
+
+                // Return the file
+                destinationFile
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
+        }
+    }
+
+    suspend fun clearCoverArt(game: Game) {
+        try {
+            val oldFile = File(game.customCover)
+            if (oldFile.exists() && oldFile.isFile) {
+                oldFile.delete()
+            }
+            container.gameLibraryRepository.updateGame(game.copy(customCover = ""))
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
         }
     }
 
