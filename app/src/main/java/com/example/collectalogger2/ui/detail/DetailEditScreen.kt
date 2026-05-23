@@ -1,5 +1,12 @@
 package com.example.collectalogger2.ui.detail
 
+import android.annotation.SuppressLint
+import android.content.Context
+import android.net.Uri
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,12 +44,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -54,6 +63,10 @@ import com.example.collectalogger2.ui.shared.AnnotatedButton
 import com.example.collectalogger2.ui.shared.BackgroundArt
 import com.example.collectalogger2.ui.shared.CoverArt
 import com.example.collectalogger2.util.PlayStatus
+import kotlinx.coroutines.launch
+import java.io.File
+
+// TODO add a "hey you made changes but didn't save them, would you like to? popup"
 
 @Composable
 fun DetailEditScreen(
@@ -74,12 +87,16 @@ fun DetailEditScreen(
             onSubmitChanges = { it1, it2, it3, it4, it5, it6 ->
                 viewModel.onSubmitChanges(it1, it2, it3, it4, it5, it6)
                 onNavigateBack()
+            },
+            onUpdateImage = { context, uri, game ->
+                viewModel.saveUriToInternalStorage(context, uri, game)
             }
         )
     }
 
 }
 
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetailEditScreenBody(
@@ -87,7 +104,8 @@ fun DetailEditScreenBody(
     gameGenres: List<Genre>,
     allGameGenres: List<Genre>,
     onNavigateBack: () -> Unit,
-    onSubmitChanges: (String, String, String, Set<String>, Set<String>, List<Genre>) -> Unit
+    onSubmitChanges: (String, String, String, Set<String>, Set<String>, List<Genre>) -> Unit,
+    onUpdateImage: suspend (Context, Uri, Game) -> File? = { _, _, _ -> null }
 ) {
     var titleState by remember { mutableStateOf(game.title) }
     var sortingNameState by remember { mutableStateOf(game.sortingName) }
@@ -96,6 +114,28 @@ fun DetailEditScreenBody(
     var publisherState by remember { mutableStateOf(game.publishers.toList()) }
 
     var genreState by remember { mutableStateOf(gameGenres) }
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
+
+    // Registers a photo picker activity launcher in single-select mode.
+    val pickMedia = rememberLauncherForActivityResult(PickVisualMedia()) { uri ->
+        // Callback is invoked after the user selects a media item or closes the
+        // photo picker.
+        if (uri != null) {
+            Log.d("PhotoPicker", "Selected URI: $uri")
+            coroutineScope.launch {
+                val savedFile = onUpdateImage(context, uri, game)
+                if (savedFile != null) {
+                    Log.i("PhotoPicker", "Saved successfully to: ${savedFile.absolutePath}")
+                } else {
+                    Log.e("PhotoPicker", "Failed to save image.")
+                }
+            }
+        } else {
+            Log.d("PhotoPicker", "No media selected")
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -122,13 +162,11 @@ fun DetailEditScreenBody(
         modifier = Modifier
             .background(color = MaterialTheme.colorScheme.surface)
     )
-    { innerPadding ->
-
+    {
         Column(
             verticalArrangement = Arrangement.spacedBy(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
-                .padding(innerPadding)
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
         ) {
@@ -164,7 +202,9 @@ fun DetailEditScreenBody(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     AnnotatedButton(
-                        onClick = {},
+                        onClick = {
+                            pickMedia.launch(PickVisualMediaRequest(PickVisualMedia.ImageOnly))
+                        },
                         iconPainter = painterResource(id = R.drawable.mic_image),
                         label = "Edit Cover",
                         colors = ButtonDefaults.filledTonalButtonColors()

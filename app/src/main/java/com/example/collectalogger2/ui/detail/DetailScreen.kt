@@ -111,7 +111,7 @@ fun DetailScreen(
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
-@SuppressLint("DefaultLocale")
+@SuppressLint("DefaultLocale", "UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun DetailScreenBody(
     game: Game,
@@ -160,10 +160,9 @@ fun DetailScreenBody(
         },
         modifier = Modifier
             .background(color = MaterialTheme.colorScheme.surface)
-    ) { innerPadding ->
+    ) {
         Box(
             modifier = Modifier
-                .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
         ) {
             Surface(
