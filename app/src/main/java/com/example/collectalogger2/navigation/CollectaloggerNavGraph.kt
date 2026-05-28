@@ -1,6 +1,8 @@
 package com.example.collectalogger2.navigation
 
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -89,12 +91,13 @@ fun CollectaloggerNavGraph(
                         }
                     },
                 )
-            }
+            },
+            contentWindowInsets = WindowInsets.statusBars
         ) { innerPadding ->
             NavHost(
                 navController = navController,
                 startDestination = Gallery(),
-                modifier = Modifier.padding(innerPadding)
+                modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
             ) {
                 composable<Gallery> { backStackEntry ->
                     val factory = remember {

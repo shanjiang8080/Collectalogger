@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -159,15 +160,12 @@ fun DetailEditScreenBody(
                         )
                     }
                 },
-                windowInsets = WindowInsets(
-                    top = 0.dp,
-                    bottom = 0.dp
-                ),
                 // TODO have actions with hide/delete game
             )
         },
         modifier = Modifier
-            .background(color = MaterialTheme.colorScheme.surface)
+            .background(color = MaterialTheme.colorScheme.surface),
+        contentWindowInsets = WindowInsets.statusBars
     )
     {
         Column(

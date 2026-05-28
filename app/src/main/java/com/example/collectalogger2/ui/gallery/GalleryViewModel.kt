@@ -31,10 +31,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class GalleryUiState(
+data class GalleryUiState( // TODO put the selected games into here
     val sort: Sort? = Sort(SortBy.RELEASED, false), // TODO Sort is not implemented
     val filter: Filter? = null,
-    val games: List<Game> = emptyList()
+    val games: List<Game> = emptyList(), // Stores games
+    val selectedIds: Set<Long> = emptySet() // Stores game IDs
 )
 
 sealed class SnackbarActionType {
@@ -154,6 +155,21 @@ class GalleryViewModel(val container: AppContainer, savedStateHandle: SavedState
     fun updateSort(newSort: Sort) {
         _uiState.update {
             it.copy(sort = newSort)
+        }
+    }
+    fun toggleSelection(id: Long) {
+        _uiState.update {
+            if (_uiState.value.selectedIds.contains(id)) {
+                it.copy(selectedIds = _uiState.value.selectedIds - id)
+            } else {
+                it.copy(selectedIds = _uiState.value.selectedIds + id)
+            }
+        }
+    }
+
+    fun clearSelection() {
+        _uiState.update {
+            it.copy(selectedIds = setOf())
         }
     }
 

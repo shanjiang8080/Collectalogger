@@ -2,26 +2,46 @@ package com.example.collectalogger2.ui.gallery
 
 import android.annotation.SuppressLint
 import android.util.Log
+import androidx.compose.animation.core.EaseOut
+import androidx.compose.animation.core.EaseOutBack
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.DockedSearchBar
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -36,7 +56,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -45,6 +64,8 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -54,9 +75,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.collectalogger2.R
@@ -113,11 +139,13 @@ fun GalleryScreen(
         uiEvents = viewModel.uiEvents,
         saveSteamId = { it -> viewModel.saveSteamId(it) },
         saveEpicId = { it -> viewModel.saveEpicInfo(it) },
-        loadPercentage = loadPercentage
+        loadPercentage = loadPercentage,
+        toggleSelection = { viewModel.toggleSelection(it) },
+        clearSelection = { viewModel.clearSelection() }
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun GalleryScreenBody(
@@ -134,10 +162,11 @@ fun GalleryScreenBody(
     saveSteamId: (String) -> Unit,
     saveEpicId: (String) -> Unit,
     loadPercentage: Float,
+    toggleSelection: (Long) -> Unit,
+    clearSelection: () -> Unit = {}
 ) {
+    // Filter/sort states
     var showFilterSheet by remember { mutableStateOf(false) }
-    // val sheetState = rememberModalBottomSheetState()
-    // val scope = rememberCoroutineScope()
 
     var favoritesChecked by remember { mutableStateOf(uiState.filter?.isFavorite == true) }
     var sortMenuBoxState by remember { mutableStateOf(false) }
@@ -145,7 +174,13 @@ fun GalleryScreenBody(
     var selectedGenreState by remember { mutableStateOf<Genre?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // UI states
     var dialogState by remember { mutableStateOf<DialogActionType?>(null) }
+    val topBarScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+
+    // Bulk selection states
+    val isSelectionMode = uiState.selectedIds.isNotEmpty()
+
 
     // Dunno where to put this
     LaunchedEffect(Unit) {
@@ -229,6 +264,28 @@ fun GalleryScreenBody(
 
     Scaffold(
         topBar = {
+            if (isSelectionMode) { // TODO have an else with AppBarWithSearch
+                TopAppBar(
+                    title = {
+                        Text("${uiState.selectedIds.size} selected")
+                    },
+                    modifier = Modifier,
+                    navigationIcon = {
+                        IconButton(onClick = clearSelection) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Clear Selection"
+                            )
+                        }
+                    },
+                    actions = {},
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        titleContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    ),
+                    scrollBehavior = topBarScrollBehavior,
+                )
+            }
             if (loadPercentage != -1f) {
                 LinearProgressIndicator(
                     color = MaterialTheme.colorScheme.primary,
@@ -242,9 +299,48 @@ fun GalleryScreenBody(
         },
         floatingActionButton = {
             FloatingRefreshButton({ updateGames() }, loadPercentage != -1f)
-        }
+        },
+        contentWindowInsets = WindowInsets.statusBars
     ) {
-        Column {
+
+        var searchBarHeightDp by remember { mutableStateOf(0.dp) }
+        val density = LocalDensity.current
+
+        Box(
+            contentAlignment = Alignment.TopCenter
+        ) {
+            // TODO wrap this in an if statement, hopefully with an animation tween offscreen
+
+
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(128.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                state = listState,
+                contentPadding = PaddingValues(top = searchBarHeightDp + 16.dp)
+            ) {
+                if (uiState.filter != null) {
+                    items(uiState.filter.getFilteredItems(uiState.games)) {
+                        GalleryGame(
+                            game = it,
+                            onNavigateToDetail = onNavigateToDetail,
+                            isSelectionMode = isSelectionMode,
+                            isSelected = it.id in uiState.selectedIds,
+                            toggleSelection = toggleSelection
+                        )
+                    }
+                } else {
+                    items(uiState.games) {
+                        GalleryGame(
+                            game = it,
+                            onNavigateToDetail = onNavigateToDetail,
+                            isSelectionMode = isSelectionMode,
+                            isSelected = it.id in uiState.selectedIds,
+                            toggleSelection = toggleSelection
+                        )
+                    }
+                }
+            }
             FilterSearchBar(
                 textFieldState = textFieldState,
                 onSearch = onSearch,
@@ -252,25 +348,16 @@ fun GalleryScreenBody(
                 onNavigateToDetail = onNavigateToDetail,
                 onClickFilterButton = { showFilterSheet = true },
                 // add more when more filters get added
-                hasFiltersApplied = favoritesChecked
+                hasFiltersApplied = favoritesChecked,
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .onGloballyPositioned { coordinates ->
+                        // Measure the height in pixels and convert to Dp
+                        if (searchBarHeightDp == 0.dp) {
+                            searchBarHeightDp = with(density) { coordinates.size.height.toDp() }
+                        }
+                    }
             )
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(128.dp),
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-                state = listState,
-            ) {
-                if (uiState.filter != null) {
-                    items(uiState.filter.getFilteredItems(uiState.games)) {
-                        GalleryGame(it, onNavigateToDetail)
-                    }
-                } else {
-                    items(uiState.games) {
-                        GalleryGame(it, onNavigateToDetail)
-                    }
-                }
-            }
-
         }
 
         if (showFilterSheet) {
@@ -283,7 +370,7 @@ fun GalleryScreenBody(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
-                            .padding(15.dp)
+                            .padding(16.dp)
                             .fillMaxWidth()
                     ) {
                         Text(
@@ -303,7 +390,7 @@ fun GalleryScreenBody(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
-                            .padding(15.dp)
+                            .padding(16.dp)
                             .fillMaxWidth()
                     ) {
                         Text(
@@ -322,7 +409,7 @@ fun GalleryScreenBody(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
-                            .padding(15.dp)
+                            .padding(16.dp)
                             .fillMaxWidth()
                     ) {
                         Text(
@@ -400,22 +487,6 @@ fun GalleryScreenBody(
 }
 
 
-@Composable
-fun FilterRow(
-    name: String,
-    filterComposable: @Composable () -> Unit,
-) {
-    Row(
-        horizontalArrangement = Arrangement.SpaceBetween,
-        modifier = Modifier.padding(15.dp)
-    ) {
-        Text(
-            text = name,
-        )
-        filterComposable
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FilterSearchBar(
@@ -424,12 +495,13 @@ fun FilterSearchBar(
     getSearchedGamesList: (String) -> List<Game>,
     onNavigateToDetail: (Long) -> Unit,
     onClickFilterButton: () -> Unit,
-    hasFiltersApplied: Boolean = false
+    modifier: Modifier = Modifier,
+    hasFiltersApplied: Boolean = false,
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
     var searchResults = getSearchedGamesList(textFieldState.text.toString())
 
-    SearchBar(
+    DockedSearchBar(
         inputField = {
             SearchBarDefaults.InputField(
                 query = textFieldState.text.toString(),
@@ -462,10 +534,7 @@ fun FilterSearchBar(
         },
         expanded = expanded,
         onExpandedChange = {it: Boolean -> expanded = it},
-        windowInsets = WindowInsets(top = 0.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(10.dp, 7.dp, 10.dp, 10.dp)
+        modifier = modifier
     ) {
         LazyColumn {
             items(count = searchResults.size) { index ->
@@ -474,7 +543,11 @@ fun FilterSearchBar(
                 ListItem(
                     headlineContent = { Text(resultText) },
                     leadingContent = {
-                        GalleryGame(resultGame, {}) // no onClick, since it's given to the parent
+                        CoverArt(
+                            game = resultGame,
+                            displayText = false,
+                            modifier = Modifier.clip(RoundedCornerShape(4.dp))
+                        ) // no onClick, since it's given to the parent
                     },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     modifier = Modifier
@@ -546,15 +619,98 @@ fun FloatingRefreshButton(onClick: () -> Unit, loading: Boolean) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun GalleryGame(
     game: Game,
     onNavigateToDetail: (id: Long) -> Unit,
+    isSelectionMode: Boolean,
+    isSelected: Boolean,
+    toggleSelection: (id: Long) -> Unit = {},
 ) {
-    CoverArt(
-        game = game,
-        modifier = Modifier.clickable(onClick = { onNavigateToDetail(game.id) })
+    val animationSpec = tween<Float>(durationMillis = 100, easing = EaseOutBack)
+    val dpAnimationSpec = tween<Dp>(durationMillis = 100, easing = EaseOut)
+
+    // 1. Cover Art Scale Animation
+    val contentScale by animateFloatAsState(
+        targetValue = if (isSelected) 0.8f else 1.0f,
+        animationSpec = animationSpec,
+        label = "CoverArtScale"
     )
+
+    // 2. Corner Radius Animation (e.g., from 8.dp normal to 24.dp when selected)
+    val cornerRadius by animateDpAsState(
+        targetValue = if (isSelected) 16.dp else 8.dp,
+        animationSpec = dpAnimationSpec,
+        label = "CornerRadius"
+    )
+
+    // 3. Checkbox Scale Animation (0.0f to 1.0f)
+    val checkboxScale by animateFloatAsState(
+        targetValue = if (isSelectionMode) 1.0f else 0.0f,
+        animationSpec = animationSpec,
+        label = "CheckboxScale"
+    )
+
+    Box(
+        modifier = Modifier
+
+            .combinedClickable(
+                onClick = {
+                    if (isSelectionMode) {
+                        toggleSelection(game.id)
+                    } else {
+                        onNavigateToDetail(game.id)
+                    }
+                },
+                onLongClick = {
+                    toggleSelection(game.id)
+                }
+            )
+            .clip(RoundedCornerShape(8.dp))
+    ) {
+        // Cover Art Container
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    if (isSelectionMode) MaterialTheme.colorScheme.secondaryContainer
+                    else Color.Transparent
+                )
+                .scale(contentScale)
+                // Dynamically clips the art using the animated radius
+                .clip(RoundedCornerShape(cornerRadius)),
+            contentAlignment = Alignment.Center
+        ) {
+            CoverArt(game = game)
+        }
+
+        // Checkbox Overlay
+        // The Box always occupies its 24.dp spot in the TopEnd, preventing position shifting
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(8.dp)
+                .size(24.dp)
+                // We scale the layout from its absolute center
+                .scale(checkboxScale)
+                .clip(CircleShape)
+                .background(
+                    if (isSelected) MaterialTheme.colorScheme.primary
+                    else Color.White.copy(alpha = 0.6f)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isSelected && checkboxScale > 0.5f) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Selected",
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+    }
 }
 
 @Preview(widthDp = 400,heightDp = 800)
@@ -581,6 +737,32 @@ private fun GalleryPreview() {
         uiEvents = MutableSharedFlow<UiEvent>(),
         saveSteamId = {},
         saveEpicId = {},
-        loadPercentage = -1f
+        loadPercentage = -1f,
+        toggleSelection = {}
     )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Preview
+@Composable
+private fun GalleryGameSelectedPreview() {
+    val games = listOf(
+        Game("Rogue Legacy II"),
+        Game("Stardew Valley"),
+        Game("Celeste"),
+        Game("Super Meat Boy"),
+        Game("Yeah! You Want \"Those Games\", Right? So Here You Go! Now, Let's See You Clear Them!\n")
+    )
+
+    FlowRow {
+        for (game in games) {
+            GalleryGame(
+                game = game,
+                onNavigateToDetail = {},
+                isSelectionMode = true,
+                isSelected = true,
+                toggleSelection = {},
+            )
+        }
+    }
 }

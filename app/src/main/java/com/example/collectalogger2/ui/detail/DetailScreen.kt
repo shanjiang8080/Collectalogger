@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
@@ -141,10 +142,6 @@ fun DetailScreenBody(
                         )
                     }
                 },
-                windowInsets = WindowInsets(
-                    top = 0.dp,
-                    bottom = 0.dp
-                ),
                 actions = {
                     FavoriteIcon(game, toggleFavorite)
                     IconButton(
@@ -159,7 +156,8 @@ fun DetailScreenBody(
                 )
         },
         modifier = Modifier
-            .background(color = MaterialTheme.colorScheme.surface)
+            .background(color = MaterialTheme.colorScheme.surface),
+        contentWindowInsets = WindowInsets.statusBars
     ) {
         Box(
             modifier = Modifier
