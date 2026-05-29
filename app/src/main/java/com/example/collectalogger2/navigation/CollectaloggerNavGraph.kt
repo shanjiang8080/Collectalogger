@@ -66,7 +66,6 @@ data class Gallery(
 //@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun CollectaloggerNavGraph(
-    modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
 ) {
     val appContainer = (LocalContext.current.applicationContext as CollectaloggerApplication).container

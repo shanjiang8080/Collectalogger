@@ -41,9 +41,10 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.DockedSearchBar
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExpandedFullScreenSearchBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FloatingActionButton
@@ -53,10 +54,12 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBarDefaults
+import androidx.compose.material3.SearchBarScrollBehavior
+import androidx.compose.material3.SearchBarState
+import androidx.compose.material3.SearchBarValue
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -66,11 +69,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopSearchBar
+import androidx.compose.material3.rememberSearchBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -78,8 +84,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -96,6 +100,7 @@ import com.example.collectalogger2.util.Filter
 import com.example.collectalogger2.util.LocalNavEventBus
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.launch
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -135,7 +140,12 @@ fun GalleryScreen(
         onUpdateFilter = { viewModel.updateFilter(it) },
         onNavigateToDetail = onNavigateToDetail,
         getSearchedGamesList = { it -> viewModel.getSearchedGamesList(it) },
-        onSearch = { it -> viewModel.getSearchedGames(it) },
+        onSearch = { it ->
+            Log.d(
+                "GalleryScreen",
+                "onSearch is happening"
+            ); viewModel.getSearchedGames(it)
+        },
         uiEvents = viewModel.uiEvents,
         saveSteamId = { it -> viewModel.saveSteamId(it) },
         saveEpicId = { it -> viewModel.saveEpicInfo(it) },
@@ -180,6 +190,10 @@ fun GalleryScreenBody(
 
     // Bulk selection states
     val isSelectionMode = uiState.selectedIds.isNotEmpty()
+
+    // Search Bar states
+    val searchBarState = rememberSearchBarState()
+    val searchScrollBehavior = SearchBarDefaults.enterAlwaysSearchBarScrollBehavior()
 
 
     // Dunno where to put this
@@ -285,6 +299,18 @@ fun GalleryScreenBody(
                     ),
                     scrollBehavior = topBarScrollBehavior,
                 )
+            } else {
+                NeoSearchBar(
+                    textFieldState = textFieldState,
+                    onSearch = onSearch,
+                    getSearchedGamesList = getSearchedGamesList,
+                    onNavigateToDetail = onNavigateToDetail,
+                    onClickFilterButton = { showFilterSheet = true },
+                    // add more when more filters get added
+                    hasFiltersApplied = favoritesChecked,
+                    searchBarState = searchBarState,
+                    scrollBehavior = searchScrollBehavior
+                )
             }
             if (loadPercentage != -1f) {
                 LinearProgressIndicator(
@@ -301,63 +327,37 @@ fun GalleryScreenBody(
             FloatingRefreshButton({ updateGames() }, loadPercentage != -1f)
         },
         contentWindowInsets = WindowInsets.statusBars
-    ) {
+    ) { innerPadding ->
 
-        var searchBarHeightDp by remember { mutableStateOf(0.dp) }
-        val density = LocalDensity.current
 
-        Box(
-            contentAlignment = Alignment.TopCenter
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(128.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            state = listState,
+            contentPadding = PaddingValues(top = innerPadding.calculateTopPadding())
         ) {
-            // TODO wrap this in an if statement, hopefully with an animation tween offscreen
-
-
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(128.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                state = listState,
-                contentPadding = PaddingValues(top = searchBarHeightDp + 16.dp)
-            ) {
-                if (uiState.filter != null) {
-                    items(uiState.filter.getFilteredItems(uiState.games)) {
-                        GalleryGame(
-                            game = it,
-                            onNavigateToDetail = onNavigateToDetail,
-                            isSelectionMode = isSelectionMode,
-                            isSelected = it.id in uiState.selectedIds,
-                            toggleSelection = toggleSelection
-                        )
-                    }
-                } else {
-                    items(uiState.games) {
-                        GalleryGame(
-                            game = it,
-                            onNavigateToDetail = onNavigateToDetail,
-                            isSelectionMode = isSelectionMode,
-                            isSelected = it.id in uiState.selectedIds,
-                            toggleSelection = toggleSelection
-                        )
-                    }
+            if (uiState.filter != null) {
+                items(uiState.filter.getFilteredItems(uiState.games)) {
+                    GalleryGame(
+                        game = it,
+                        onNavigateToDetail = onNavigateToDetail,
+                        isSelectionMode = isSelectionMode,
+                        isSelected = it.id in uiState.selectedIds,
+                        toggleSelection = toggleSelection
+                    )
+                }
+            } else {
+                items(uiState.games) {
+                    GalleryGame(
+                        game = it,
+                        onNavigateToDetail = onNavigateToDetail,
+                        isSelectionMode = isSelectionMode,
+                        isSelected = it.id in uiState.selectedIds,
+                        toggleSelection = toggleSelection
+                    )
                 }
             }
-            FilterSearchBar(
-                textFieldState = textFieldState,
-                onSearch = onSearch,
-                getSearchedGamesList = getSearchedGamesList,
-                onNavigateToDetail = onNavigateToDetail,
-                onClickFilterButton = { showFilterSheet = true },
-                // add more when more filters get added
-                hasFiltersApplied = favoritesChecked,
-                modifier = Modifier
-                    .padding(top = 8.dp)
-                    .onGloballyPositioned { coordinates ->
-                        // Measure the height in pixels and convert to Dp
-                        if (searchBarHeightDp == 0.dp) {
-                            searchBarHeightDp = with(density) { coordinates.size.height.toDp() }
-                        }
-                    }
-            )
         }
 
         if (showFilterSheet) {
@@ -431,7 +431,7 @@ fun GalleryScreenBody(
                                 },
                                 colors = ExposedDropdownMenuDefaults.textFieldColors(),
                                 modifier = Modifier.menuAnchor(
-                                    MenuAnchorType.PrimaryNotEditable,
+                                    ExposedDropdownMenuAnchorType.PrimaryNotEditable,
                                     true
                                 )
                             )
@@ -486,31 +486,37 @@ fun GalleryScreenBody(
     }
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FilterSearchBar(
+fun NeoSearchBar(
     textFieldState: TextFieldState,
+    searchBarState: SearchBarState,
+    scrollBehavior: SearchBarScrollBehavior,
     onSearch: (String) -> Unit,
     getSearchedGamesList: (String) -> List<Game>,
     onNavigateToDetail: (Long) -> Unit,
     onClickFilterButton: () -> Unit,
-    modifier: Modifier = Modifier,
     hasFiltersApplied: Boolean = false,
 ) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
     var searchResults = getSearchedGamesList(textFieldState.text.toString())
+    // Create a coroutine scope to trigger the suspend functions
+    val scope = rememberCoroutineScope()
 
-    DockedSearchBar(
-        inputField = {
+    val inputField =
+        @Composable {
             SearchBarDefaults.InputField(
                 query = textFieldState.text.toString(),
-                onQueryChange = { textFieldState.edit { replace(0, length, it) } },
+                onQueryChange = {
+                    Log.d("GalleryScreenInputField", textFieldState.text.toString())
+                    textFieldState.edit { replace(0, length, it) }
+                },
                 onSearch = {
                     onSearch(textFieldState.text.toString())
-                    expanded = false
+                    scope.launch {
+                        searchBarState.animateToCollapsed()
+                    }
                 },
-                expanded = expanded,
+                expanded = searchBarState.currentValue == SearchBarValue.Expanded,
                 leadingIcon = {
                     Icon(Icons.Default.Search, contentDescription = "Search button")
                 },
@@ -528,13 +534,27 @@ fun FilterSearchBar(
                         ) // TODO implement this later
                     }
                 },
-                onExpandedChange = { expanded = it },
+                onExpandedChange = { shouldExpand ->
+                    scope.launch {
+                        if (shouldExpand) {
+                            searchBarState.animateToExpanded()
+                        } else {
+                            searchBarState.animateToCollapsed()
+                        }
+                    }
+                },
                 placeholder = { Text("Search your library") }
             )
-        },
-        expanded = expanded,
-        onExpandedChange = {it: Boolean -> expanded = it},
-        modifier = modifier
+        }
+
+    TopSearchBar(
+        scrollBehavior = scrollBehavior,
+        state = searchBarState,
+        inputField = inputField,
+    )
+    ExpandedFullScreenSearchBar(
+        inputField = inputField,
+        state = searchBarState,
     ) {
         LazyColumn {
             items(count = searchResults.size) { index ->
@@ -553,7 +573,9 @@ fun FilterSearchBar(
                     modifier = Modifier
                         .clickable {
                             onNavigateToDetail(resultGame.id)
-                            expanded = false
+                            scope.launch {
+                                searchBarState.animateToCollapsed()
+                            }
                         }
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -563,8 +585,9 @@ fun FilterSearchBar(
             }
         }
     }
-
 }
+
+
 @Composable
 fun FilterButton(
     hasFilters: Boolean,
