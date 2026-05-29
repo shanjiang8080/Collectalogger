@@ -60,7 +60,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -125,8 +126,10 @@ fun DetailScreenBody(
     onSelectGalleryFilter: (Int?, String?, String?, Boolean?, String?, String?) -> Unit,
     onSelectEditScreen: (Long) -> Unit
 ) {
-    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
-    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    val screenHeight =
+        with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height.toDp() }
+    val screenWidth =
+        with(LocalDensity.current) { LocalWindowInfo.current.containerSize.width.toDp() }
     Scaffold (
         topBar = {
             TopAppBar(
@@ -158,10 +161,11 @@ fun DetailScreenBody(
         modifier = Modifier
             .background(color = MaterialTheme.colorScheme.surface),
         contentWindowInsets = WindowInsets.statusBars
-    ) {
+    ) { innerPadding ->
         Box(
             modifier = Modifier
                 .verticalScroll(rememberScrollState())
+                .padding(innerPadding)
         ) {
             Surface(
                 color = MaterialTheme.colorScheme.surfaceContainer
