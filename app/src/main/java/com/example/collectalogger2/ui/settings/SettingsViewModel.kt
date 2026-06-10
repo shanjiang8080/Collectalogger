@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.collectalogger2.AppContainer
+import com.example.collectalogger2.data.repository.SettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,7 +13,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 
-class SettingsViewModel(val container: AppContainer) : ViewModel() {
+class SettingsViewModel(val settingsRepository: SettingsRepository) : ViewModel() {
     private val _steamId = MutableStateFlow<String>("")
     private val _epicInfo = MutableStateFlow<String>("")
     private val _currentStoreFront = MutableStateFlow<String>("")
@@ -26,24 +27,29 @@ class SettingsViewModel(val container: AppContainer) : ViewModel() {
 
     init {
         viewModelScope.launch {
-            _steamId.value = container.settingsRepository.steamId.first()
-            _epicInfo.value = container.settingsRepository.epicIdInfo.first()
-            _gogUsername.value = container.settingsRepository.gogUsername.first()
+            _steamId.value = settingsRepository.steamId.first()
+            _epicInfo.value = settingsRepository.epicIdInfo.first()
+            _gogUsername.value = settingsRepository.gogUsername.first()
+            _itchSecret.value = settingsRepository.itchSecret.first()
             Log.i("steamid_open", steamId.value)
             Log.i("epicinfo_open", epicInfo.value)
             Log.i("gogusername_open", gogUsername.value)
 
-            container.settingsRepository.steamId.collect { id ->
+            settingsRepository.steamId.collect { id ->
                 _steamId.value = id
                 Log.i("steamid", id)
             }
-            container.settingsRepository.epicIdInfo.collect { id ->
+            settingsRepository.epicIdInfo.collect { id ->
                 _epicInfo.value = id
                 Log.i("epicinfo", id)
             }
-            container.settingsRepository.gogUsername.collect { id ->
+            settingsRepository.gogUsername.collect { id ->
                 _gogUsername.value = id
                 Log.i("gogusername", id)
+            }
+            settingsRepository.itchSecret.collect { id ->
+                _itchSecret.value = id
+                Log.i("itchsecret", id)
             }
         }
     }
@@ -54,7 +60,7 @@ class SettingsViewModel(val container: AppContainer) : ViewModel() {
      */
     fun saveSteamId(url: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            getSteamLogin(url, container)
+            getSteamLogin(url, settingsRepository)
         }
     }
     /**
@@ -62,7 +68,7 @@ class SettingsViewModel(val container: AppContainer) : ViewModel() {
      */
     fun saveEpicInfo(code: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            getEpicLogin(code, container)
+            getEpicLogin(code, settingsRepository)
         }
     }
 
@@ -71,13 +77,13 @@ class SettingsViewModel(val container: AppContainer) : ViewModel() {
      */
     fun saveGogUsername(username: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            getGogLogin(username, container)
+            getGogLogin(username, settingsRepository)
         }
     }
 
     fun saveItchSecret(secret: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            getItchLogin(secret, container)
+            getItchLogin(secret, settingsRepository)
         }
     }
 
@@ -91,6 +97,6 @@ class SettingsViewModelFactory(
     private val container: AppContainer
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return SettingsViewModel(container) as T
+        return SettingsViewModel(container.settingsRepository) as T
     }
 }

@@ -1,7 +1,7 @@
 package com.example.collectalogger2.ui.settings
 
 import android.util.Log
-import com.example.collectalogger2.AppContainer
+import com.example.collectalogger2.data.repository.SettingsRepository
 import com.example.collectalogger2.util.APIException
 import com.example.collectalogger2.util.libraryObjects.EpicSource
 import com.example.collectalogger2.util.libraryObjects.SteamSource
@@ -9,11 +9,11 @@ import org.json.JSONObject
 
 // These functions get the log in details for their respective libraries.
 // UPDATE WHEN ADDING LIBRARIES
-suspend fun getSteamLogin(url: String, container: AppContainer) {
+suspend fun getSteamLogin(url: String, settingsRepository: SettingsRepository) {
     val id: String
     try {
         id = _getSteamID(url)
-        container.settingsRepository.saveSteamId(id)
+        settingsRepository.saveSteamId(id)
         Log.i("Steam ID saved!", id)
     } catch (e: Exception) {
         Log.e("Failed to process Steam ID from URL!", e.message ?: "")
@@ -21,7 +21,7 @@ suspend fun getSteamLogin(url: String, container: AppContainer) {
 
 }
 
-suspend fun getEpicLogin(code: String, container: AppContainer) {
+suspend fun getEpicLogin(code: String, settingsRepository: SettingsRepository) {
     try {
         // now we have the code, we can authenticate and get the string.
         val response = EpicSource.makeAPICall(
@@ -32,7 +32,7 @@ suspend fun getEpicLogin(code: String, container: AppContainer) {
             params = mapOf(),
             bodyParams = mapOf("grant_type" to "authorization_code", "code" to code)
         ) as JSONObject
-        container.settingsRepository.saveEpicIdInfo(response.toString())
+        settingsRepository.saveEpicIdInfo(response.toString())
         Log.i("Epic login info saved!", response.toString())
     } catch (ex: Exception) {
         Log.e("Failed to save Epic Games info!", ex.message ?: "")
@@ -40,18 +40,18 @@ suspend fun getEpicLogin(code: String, container: AppContainer) {
 
 }
 
-suspend fun getGogLogin(username: String, container: AppContainer) {
+suspend fun getGogLogin(username: String, settingsRepository: SettingsRepository) {
     try {
-        container.settingsRepository.saveGogUsername(username)
+        settingsRepository.saveGogUsername(username)
         Log.i("GOG username saved!", username)
     } catch (e: Exception) {
         Log.e("Failed to save GOG username!", e.message ?: "")
     }
 }
 
-suspend fun getItchLogin(secret: String, container: AppContainer) {
+suspend fun getItchLogin(secret: String, settingsRepository: SettingsRepository) {
     try {
-        container.settingsRepository.saveItchSecret(secret)
+        settingsRepository.saveItchSecret(secret)
         Log.i("Itch secret saved!", secret)
     } catch (e: Exception) {
         Log.e("Failed to save Itch secret!", e.message ?: "")

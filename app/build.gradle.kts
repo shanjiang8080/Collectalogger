@@ -71,6 +71,10 @@ android {
         compose = true
         buildConfig = true
     }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 configurations.all {
@@ -128,6 +132,18 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    //// Testing
+    // Local Unit Tests (Run on JVM)
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3") // For testing ViewModels with Coroutines
+    testImplementation("app.cash.turbine:turbine:1.0.0") // Highly recommended for testing StateFlows
+    testImplementation("io.mockk:mockk:1.13.8") // For mocking repositories/datasources
+    testImplementation("org.slf4j:slf4j-simple:2.0.9")
+
+    // UI Tests (Run on Device/Emulator)
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
 
 ksp {

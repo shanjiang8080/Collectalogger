@@ -10,15 +10,15 @@ import androidx.savedstate.SavedStateRegistryOwner
 import com.example.collectalogger2.AppContainer
 import com.example.collectalogger2.data.Game
 import com.example.collectalogger2.data.Genre
+import com.example.collectalogger2.data.repository.GameLibraryRepository
 import com.example.collectalogger2.data.repository.RepositoryEvent
+import com.example.collectalogger2.data.repository.SettingsRepository
 import com.example.collectalogger2.ui.gallery.DialogActionType.LoggedOut
 import com.example.collectalogger2.ui.gallery.SnackbarActionType.NonImportedGames
 import com.example.collectalogger2.ui.gallery.UiEvent.LoadingFinished
 import com.example.collectalogger2.ui.gallery.UiEvent.ShowDialog
 import com.example.collectalogger2.ui.gallery.UiEvent.ShowError
 import com.example.collectalogger2.ui.gallery.UiEvent.ShowSnackbar
-import com.example.collectalogger2.ui.settings.getEpicLogin
-import com.example.collectalogger2.ui.settings.getSteamLogin
 import com.example.collectalogger2.util.Filter
 import com.example.collectalogger2.util.Sort
 import com.example.collectalogger2.util.SortBy
@@ -48,7 +48,6 @@ sealed class DialogActionType {
     data class CheckNonImportedItems(val items: Map<String, List<Game>>) : DialogActionType()
 }
 
-// TODO implement a UiEvent thing and make it work properly as snackbars/dialogs
 // snackbars for informational/low priority stuff like retrying, errors, etc
 // also have one for missing games (but add the option for ignore lists in the future...)
 // dialogs for high priority (probably?) like logged out of epic games
@@ -59,10 +58,14 @@ sealed class UiEvent {
     object LoadingFinished : UiEvent()
 }
 
-class GalleryViewModel(val container: AppContainer, savedStateHandle: SavedStateHandle) :
+class GalleryViewModel(
+    val gameLibraryRepository: GameLibraryRepository,
+    val settingsRepository: SettingsRepository,
+    savedStateHandle: SavedStateHandle
+) :
     ViewModel() {
     // like, for example, Steam account ID
-    var repository = container.gameLibraryRepository
+    var repository = gameLibraryRepository
 
     private val _cachedGames = MutableStateFlow<List<Game>>(emptyList())
     val cachedGames: StateFlow<List<Game>> = _cachedGames
@@ -76,7 +79,7 @@ class GalleryViewModel(val container: AppContainer, savedStateHandle: SavedState
     private val _uiEvents = MutableSharedFlow<UiEvent>()
     val uiEvents = _uiEvents.asSharedFlow()
 
-    val loadPercentage = container.gameLibraryRepository.loadPercentage
+    val loadPercentage = gameLibraryRepository.loadPercentage
 
     private fun <T> getList(
         savedStateHandle: SavedStateHandle,
@@ -98,7 +101,7 @@ class GalleryViewModel(val container: AppContainer, savedStateHandle: SavedState
         )
 
         viewModelScope.launch(Dispatchers.IO) {
-            container.gameLibraryRepository.getAllGamesStream().collect { games ->
+            gameLibraryRepository.getAllGamesStream().collect { games ->
                 _cachedGames.value = games
                 _uiState.update {
                     it.copy(
@@ -109,13 +112,13 @@ class GalleryViewModel(val container: AppContainer, savedStateHandle: SavedState
             }
         }
         viewModelScope.launch(Dispatchers.IO) {
-            container.gameLibraryRepository.genreFlow.collect { genres ->
+            gameLibraryRepository.genreFlow.collect { genres ->
                 _allGameGenres.value = genres
             }
         }
 
         viewModelScope.launch(Dispatchers.Main) {
-            container.gameLibraryRepository.eventFlow.collect { event ->
+            gameLibraryRepository.eventFlow.collect { event ->
                 when (event) {
                     is RepositoryEvent.ShowLoggedOut -> {
                         _uiEvents.emit(
@@ -184,7 +187,7 @@ class GalleryViewModel(val container: AppContainer, savedStateHandle: SavedState
     // This is primarily for debugging
     fun deleteGames() {
         viewModelScope.launch(Dispatchers.IO) {
-            var games = repository.getAllGames()
+            val games = repository.getAllGames()
             games.forEach { game ->
                 repository.deleteGame(game)
             }
@@ -196,13 +199,13 @@ class GalleryViewModel(val container: AppContainer, savedStateHandle: SavedState
     // UPDATE WHEN ADDING LIBRARIES
     fun saveSteamId(url: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            getSteamLogin(url, container)
+            settingsRepository.getSteamLogin(url)
         }
     }
 
     fun saveEpicInfo(code: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            getEpicLogin(code, container)
+            settingsRepository.getEpicLogin(code)
         }
     }
 
@@ -212,13 +215,15 @@ class GalleryViewModel(val container: AppContainer, savedStateHandle: SavedState
             _uiState.value = _uiState.value.copy(games = _cachedGames.value)
             return
         }
-        var filteredGames = cachedGames.value.filter { it.title.contains(search, ignoreCase = true) }
+        val filteredGames =
+            cachedGames.value.filter { it.title.contains(search, ignoreCase = true) }
         _uiState.value = _uiState.value.copy(games = filteredGames)
     }
 
     fun getSearchedGamesList(search: String): List<Game> {
         if (search.isEmpty()) return listOf<Game>()
-        var filteredGames = cachedGames.value.filter { it.title.contains(search, ignoreCase = true) }
+        val filteredGames =
+            cachedGames.value.filter { it.title.contains(search, ignoreCase = true) }
         return filteredGames
     }
 
@@ -236,6 +241,10 @@ class GalleryViewModelFactory(
         modelClass: Class<T>,
         handle: SavedStateHandle
     ): T {
-        return GalleryViewModel(container, handle) as T
+        return GalleryViewModel(
+            container.gameLibraryRepository,
+            container.settingsRepository,
+            handle
+        ) as T
     }
 }
