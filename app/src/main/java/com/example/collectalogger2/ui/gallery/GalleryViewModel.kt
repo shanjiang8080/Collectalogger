@@ -1,12 +1,12 @@
 package com.example.collectalogger2.ui.gallery
 
-import android.os.Bundle
 import android.util.Log
-import androidx.lifecycle.AbstractSavedStateViewModelFactory
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
-import androidx.savedstate.SavedStateRegistryOwner
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.example.collectalogger2.AppContainer
 import com.example.collectalogger2.data.Game
 import com.example.collectalogger2.data.Genre
@@ -232,15 +232,10 @@ class GalleryViewModel(
 
 @Suppress("UNCHECKED_CAST")
 class GalleryViewModelFactory(
-    private val container: AppContainer,
-    owner: SavedStateRegistryOwner,
-    defaultArgs: Bundle? = null
-) : AbstractSavedStateViewModelFactory(owner, defaultArgs) {
-    override fun <T : ViewModel> create(
-        key: String,
-        modelClass: Class<T>,
-        handle: SavedStateHandle
-    ): T {
+    private val container: AppContainer
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+        val handle = extras.createSavedStateHandle()
         return GalleryViewModel(
             container.gameLibraryRepository,
             container.settingsRepository,

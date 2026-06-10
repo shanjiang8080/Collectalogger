@@ -100,11 +100,7 @@ fun CollectaloggerNavGraph(
             ) {
                 composable<Gallery> { backStackEntry ->
                     val factory = remember {
-                        GalleryViewModelFactory(
-                            appContainer,
-                            backStackEntry,
-                            backStackEntry.arguments
-                        )
+                        GalleryViewModelFactory(appContainer)
                     }
                     val galleryViewModel: GalleryViewModel =
                         viewModel(backStackEntry, factory = factory)
@@ -138,18 +134,14 @@ fun CollectaloggerNavGraph(
                             navController.getBackStackEntry(Detail)
                         }
                         val factory = remember {
-                            DetailViewModelFactory(
-                                appContainer,
-                                parentEntry,
-                                parentEntry.arguments
-                            )
+                            DetailViewModelFactory(appContainer)
                         }
                         val detailViewModel: DetailViewModel =
                             viewModel(parentEntry, factory = factory)
                         DetailScreen(
                             viewModel = detailViewModel,
                             onNavigateBack = { navController.popBackStack() },
-                            onEditPlayStatus = { it -> detailViewModel.editPlayStatus(it) },
+                            onEditPlayStatus = { detailViewModel.editPlayStatus(it) },
                             onSelectGalleryFilter = {
                                     genre: Int?,
                                     developer: String?,
@@ -183,11 +175,7 @@ fun CollectaloggerNavGraph(
                             navController.getBackStackEntry(Detail)
                         }
                         val factory = remember {
-                            DetailViewModelFactory(
-                                appContainer,
-                                parentEntry,
-                                parentEntry.arguments
-                            )
+                            DetailViewModelFactory(appContainer)
                         }
                         val detailViewModel: DetailViewModel =
                             viewModel(parentEntry, factory = factory)
