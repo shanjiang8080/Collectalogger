@@ -4,16 +4,19 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    kotlin("plugin.serialization") version "2.1.21"
-    id("com.google.devtools.ksp") version "2.1.21-2.0.1"
+    kotlin("plugin.serialization") version "2.4.0"
+    id("com.google.devtools.ksp") version "2.3.2"
 }
 
 android {
     namespace = "com.example.collectalogger2"
-    compileSdk = 35
+    compileSdk = 37
 
     kotlin {
         jvmToolchain(21)
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+        }
         sourceSets.all {
             kotlin.srcDir("build/generated/ksp/${name}/kotlin")
         }
@@ -64,9 +67,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
-    kotlinOptions {
-        jvmTarget = "21"
-    }
     buildFeatures {
         compose = true
         buildConfig = true
@@ -90,7 +90,6 @@ dependencies {
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
     implementation(libs.androidx.navigation.runtime.ktx)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.material3)
@@ -107,18 +106,16 @@ dependencies {
     implementation(libs.coil.network.okhttp)
     // this is for Ktor/calling various non-igdb APIs
     //K-tor
-    implementation("io.ktor:ktor-client-android:2.3.4")
+    implementation(libs.ktor.client.android)
     implementation(libs.ktor.client.core.v150)
     implementation(libs.ktor.client.serialization.jvm)
     implementation(libs.ktor.client.logging)
     implementation(libs.androidx.work.runtime.ktx)
 
     // room persisting
-    val roomVersion = "2.7.1" // or latest stable
-
-    implementation("androidx.room:room-runtime:$roomVersion")
-    implementation("androidx.room:room-ktx:$roomVersion")
-    ksp("androidx.room:room-compiler:$roomVersion")
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 
     // DataStore for settings and such
     implementation(libs.androidx.datastore.preferences)
@@ -135,15 +132,11 @@ dependencies {
 
     //// Testing
     // Local Unit Tests (Run on JVM)
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3") // For testing ViewModels with Coroutines
-    testImplementation("app.cash.turbine:turbine:1.0.0") // Highly recommended for testing StateFlows
-    testImplementation("io.mockk:mockk:1.13.8") // For mocking repositories/datasources
-    testImplementation("org.slf4j:slf4j-simple:2.0.9")
+    testImplementation(libs.kotlinx.coroutines.test) // For testing ViewModels with Coroutines
+    testImplementation(libs.turbine) // Highly recommended for testing StateFlows
+    testImplementation(libs.mockk) // For mocking repositories/datasources
+    testImplementation(libs.slf4j.simple)
 
-    // UI Tests (Run on Device/Emulator)
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
-    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
 
 ksp {

@@ -139,16 +139,16 @@ fun GalleryScreen(
         allGenres = allGenres,
         onUpdateFilter = { viewModel.updateFilter(it) },
         onNavigateToDetail = onNavigateToDetail,
-        getSearchedGamesList = { it -> viewModel.getSearchedGamesList(it) },
-        onSearch = { it ->
+        getSearchedGamesList = { viewModel.getSearchedGamesList(it) },
+        onSearch = {
             Log.d(
                 "GalleryScreen",
                 "onSearch is happening"
             ); viewModel.getSearchedGames(it)
         },
         uiEvents = viewModel.uiEvents,
-        saveSteamId = { it -> viewModel.saveSteamId(it) },
-        saveEpicId = { it -> viewModel.saveEpicInfo(it) },
+        saveSteamId = { viewModel.saveSteamId(it) },
+        saveEpicId = { viewModel.saveEpicInfo(it) },
         loadPercentage = loadPercentage,
         toggleSelection = { viewModel.toggleSelection(it) },
         clearSelection = { viewModel.clearSelection() }
@@ -212,7 +212,7 @@ fun GalleryScreenBody(
                     val actionLabel: String?
                     val withDismissAction: Boolean
                     val duration: SnackbarDuration
-                    val performedAction: () -> Unit
+                    var performedAction: () -> Unit = {}
                     when (event.actionType) {
                         SnackbarActionType.Info -> {
                             actionLabel = null
@@ -253,15 +253,15 @@ fun GalleryScreenBody(
             is CheckNonImportedItems -> {
                 // Nothing for now
                 // TODO create a composable to try to import them or ignore them
-                (dialogState as CheckNonImportedItems).items.forEach {
-                    it.value.forEach {
+                (dialogState as CheckNonImportedItems).items.forEach { failedImports ->
+                    failedImports.value.forEach {
                         Log.i("GalleryScreen", "Not imported: ${it.title}")
                     }
                 }
             }
             is DialogActionType.LoggedOut -> {
                 // onDismiss is the same always, so define it here
-                var onDismiss = { dialogState = null }
+                val onDismiss = { dialogState = null }
                 // UPDATE WHEN ADDING LIBRARIES
                 when ((dialogState as DialogActionType.LoggedOut).library) {
                     "Steam" -> {
@@ -498,7 +498,7 @@ fun NeoSearchBar(
     onClickFilterButton: () -> Unit,
     hasFiltersApplied: Boolean = false,
 ) {
-    var searchResults = getSearchedGamesList(textFieldState.text.toString())
+    val searchResults = getSearchedGamesList(textFieldState.text.toString())
     // Create a coroutine scope to trigger the suspend functions
     val scope = rememberCoroutineScope()
 
@@ -739,7 +739,8 @@ private fun GalleryGame(
 @Preview(widthDp = 400,heightDp = 800)
 @Composable
 private fun GalleryPreview() {
-    var uiState = GalleryUiState(games = listOf(
+    val uiState = GalleryUiState(
+        games = listOf(
         Game("Rogue Legacy II"),
         Game("Stardew Valley"),
         Game("Celeste"),
@@ -754,10 +755,10 @@ private fun GalleryPreview() {
         uiState = uiState,
         onUpdateFilter = {},
         onNavigateToDetail = {},
-        getSearchedGamesList = { return@GalleryScreenBody listOf<Game>() },
+        getSearchedGamesList = { return@GalleryScreenBody listOf() },
         onSearch = {},
         allGenres = listOf(),
-        uiEvents = MutableSharedFlow<UiEvent>(),
+        uiEvents = MutableSharedFlow(),
         saveSteamId = {},
         saveEpicId = {},
         loadPercentage = -1f,
