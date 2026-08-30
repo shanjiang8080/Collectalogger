@@ -14,3 +14,8 @@
 .cxx
 local.properties
 api_keys.properties
+/.idea/.name
+/.idea/codeStyles/codeStyleConfig.xml
+/gradle/gradle-daemon-jvm.properties
+/.idea/markdown.xml
+/.idea/codeStyles/Project.xml
