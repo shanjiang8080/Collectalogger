@@ -2,6 +2,7 @@ package com.example.collectalogger2
 
 import android.content.Context
 import com.example.collectalogger2.data.GameDatabase
+import com.example.collectalogger2.data.datasource.AmazonGamesDataSource
 import com.example.collectalogger2.data.datasource.EpicDataSource
 import com.example.collectalogger2.data.datasource.GenreDataSource
 import com.example.collectalogger2.data.datasource.GogDataSource
@@ -62,6 +63,13 @@ class AppDataContainer(private val context: Context) : AppContainer {
                 .plus(
                     ItchDataSource(
                         secretFlow = settingsRepository.itchSecret,
+                        gameDao = gameDao
+                    )
+                )
+                .plus(
+                    AmazonGamesDataSource(
+                        userInfoFlow = settingsRepository.amazonIdInfo,
+                        userInfoSetter = { str -> settingsRepository.saveAmazonIdInfo(str) },
                         gameDao = gameDao
                     )
                 ),

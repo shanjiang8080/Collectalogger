@@ -10,7 +10,7 @@ import com.example.collectalogger2.util.Converters
 // Increase the version whenever you change the schema of the database table
 @Database(
     entities = [Game::class, Genre::class],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

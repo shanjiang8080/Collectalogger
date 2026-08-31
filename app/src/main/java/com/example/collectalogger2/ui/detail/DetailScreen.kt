@@ -74,6 +74,7 @@ import coil3.compose.AsyncImage
 import com.example.collectalogger2.R
 import com.example.collectalogger2.data.Game
 import com.example.collectalogger2.data.Genre
+import com.example.collectalogger2.data.datasource.AmazonGamesDataSource
 import com.example.collectalogger2.data.datasource.EpicDataSource
 import com.example.collectalogger2.data.datasource.GogDataSource
 import com.example.collectalogger2.data.datasource.ItchDataSource
@@ -102,7 +103,7 @@ fun DetailScreen(
             gameGenres,
             onNavigateBack,
             currentDialog,
-            { it -> viewModel.setDialog(it) },
+            { viewModel.setDialog(it) },
             onEditPlayStatus,
             { viewModel.toggleFavoriteGame() },
             onSelectGalleryFilter,
@@ -473,8 +474,8 @@ private fun GenreCard(
 @Composable
 private fun TextLabel(
     text: String,
+    modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.onSurface,
-    modifier: Modifier = Modifier
 ) {
     Text(
         text = text,
@@ -543,7 +544,7 @@ private fun PlatformsOwnedBar(game: Game) {
                         Icon(
                             painter = painterResource(id = R.drawable.logo_steam),
                             contentDescription = "Steam logo",
-                            modifier = Modifier.height(24.dp),
+                            modifier = Modifier.size(24.dp),
                             tint = MaterialTheme.colorScheme.secondary,
                         )
                     }
@@ -552,7 +553,7 @@ private fun PlatformsOwnedBar(game: Game) {
                         Icon(
                             painter = painterResource(id = R.drawable.logo_egs),
                             contentDescription = "Epic logo",
-                            modifier = Modifier.height(24.dp),
+                            modifier = Modifier.size(24.dp),
                             tint = MaterialTheme.colorScheme.secondary
                         )
                     }
@@ -561,7 +562,7 @@ private fun PlatformsOwnedBar(game: Game) {
                         Icon(
                             painter = painterResource(id = R.drawable.logo_gog),
                             contentDescription = "GOG logo",
-                            modifier = Modifier.height(24.dp),
+                            modifier = Modifier.size(24.dp),
                             tint = MaterialTheme.colorScheme.secondary
                         )
                     }
@@ -570,7 +571,16 @@ private fun PlatformsOwnedBar(game: Game) {
                         Icon(
                             painter = painterResource(id = R.drawable.logo_itch),
                             contentDescription = "Itch logo",
-                            modifier = Modifier.height(24.dp),
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                    if (AmazonGamesDataSource.name in game.source) {
+                        // Display an Amazon Games icon
+                        Icon(
+                            painter = painterResource(id = R.drawable.logo_amazon_games),
+                            contentDescription = "Amazon Games logo",
+                            modifier = Modifier.size(24.dp),
                             tint = MaterialTheme.colorScheme.secondary
                         )
                     }
@@ -794,7 +804,7 @@ private fun DetailScreenPreview() {
         setDialog = {},
         onEditPlayStatus = {},
         toggleFavorite = {},
-        onSelectGalleryFilter = { a: Int?, b: String?, c: String?, d: Boolean?, e: String?, f: String? -> },
+        onSelectGalleryFilter = { _: Int?, _: String?, _: String?, _: Boolean?, _: String?, _: String? -> },
         onSelectEditScreen = {}
     )
 }

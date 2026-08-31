@@ -209,6 +209,12 @@ class GalleryViewModel(
         }
     }
 
+    fun saveAmazonInfo(code: String, codeVerifier: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            settingsRepository.getAmazonLogin(code, codeVerifier)
+        }
+    }
+
     fun getSearchedGames(search: String) {
         // instead of calling the database, do a filter of the cached games
         if (search.isEmpty()) {

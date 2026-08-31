@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 5,
-    "identityHash": "a410ef3640ef2155cd2e4c967dbbc304",
+    "identityHash": "bdf430edb81f9c32cd1be1c47866eede",
     "entities": [
       {
         "tableName": "games",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`title` TEXT NOT NULL, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `description` TEXT NOT NULL, `sortingName` TEXT NOT NULL, `platform` TEXT NOT NULL, `genre` TEXT NOT NULL, `source` TEXT NOT NULL, `status` TEXT NOT NULL, `igdbId` INTEGER NOT NULL, `imageUrl` TEXT NOT NULL, `backgroundUrl` TEXT NOT NULL, `playTime` INTEGER NOT NULL, `steamId` INTEGER NOT NULL, `epicId` TEXT NOT NULL DEFAULT '', `screenshots` TEXT NOT NULL DEFAULT '', `developers` TEXT NOT NULL DEFAULT '', `publishers` TEXT NOT NULL DEFAULT '', `isFavorite` INTEGER NOT NULL DEFAULT 0)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`title` TEXT NOT NULL, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `description` TEXT NOT NULL, `sortingName` TEXT NOT NULL, `platform` TEXT NOT NULL, `genre` TEXT NOT NULL, `source` TEXT NOT NULL, `status` TEXT NOT NULL, `igdbId` INTEGER NOT NULL, `imageUrl` TEXT NOT NULL, `customCover` TEXT NOT NULL, `backgroundUrl` TEXT NOT NULL, `playTime` INTEGER NOT NULL, `steamId` INTEGER NOT NULL, `epicId` TEXT NOT NULL DEFAULT '', `gogId` TEXT NOT NULL DEFAULT '', `itchId` TEXT NOT NULL DEFAULT '', `amazonId` TEXT NOT NULL DEFAULT '', `screenshots` TEXT NOT NULL DEFAULT '', `developers` TEXT NOT NULL DEFAULT '', `publishers` TEXT NOT NULL DEFAULT '', `isFavorite` INTEGER NOT NULL DEFAULT 0)",
         "fields": [
           {
             "fieldPath": "title",
@@ -69,6 +69,12 @@
             "notNull": true
           },
           {
+            "fieldPath": "customCover",
+            "columnName": "customCover",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
             "fieldPath": "backgroundUrl",
             "columnName": "backgroundUrl",
             "affinity": "TEXT",
@@ -89,6 +95,27 @@
           {
             "fieldPath": "epicId",
             "columnName": "epicId",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "gogId",
+            "columnName": "gogId",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "itchId",
+            "columnName": "itchId",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "amazonId",
+            "columnName": "amazonId",
             "affinity": "TEXT",
             "notNull": true,
             "defaultValue": "''"
@@ -128,11 +155,41 @@
             "id"
           ]
         }
+      },
+      {
+        "tableName": "genres",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`name` TEXT NOT NULL, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `igdbId` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "igdbId",
+            "columnName": "igdbId",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a410ef3640ef2155cd2e4c967dbbc304')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'bdf430edb81f9c32cd1be1c47866eede')"
     ]
   }
 }

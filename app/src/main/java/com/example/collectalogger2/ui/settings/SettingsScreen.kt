@@ -15,6 +15,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.collectalogger2.R
+import com.example.collectalogger2.ui.overlays.AmazonOverlay
 import com.example.collectalogger2.ui.overlays.EpicOverlay
 import com.example.collectalogger2.ui.overlays.GogOverlay
 import com.example.collectalogger2.ui.overlays.ItchOverlay
@@ -29,6 +30,7 @@ fun SettingsScreen(
     val epicInfo by viewModel.epicInfo.collectAsStateWithLifecycle()
     val gogUsername by viewModel.gogUsername.collectAsStateWithLifecycle()
     val itchSecret by viewModel.itchSecret.collectAsStateWithLifecycle()
+    val amazonInfo by viewModel.amazonInfo.collectAsStateWithLifecycle()
     val activeStoreFront by viewModel.currentStoreFront.collectAsStateWithLifecycle()
 
     Column {
@@ -59,6 +61,11 @@ fun SettingsScreen(
                 "Itch button",
                 itchSecret.isEmpty()
             ) { viewModel.setStoreFront("Itch") }
+            GameLibraryButton(
+                R.drawable.logo_amazon_games,
+                "Amazon button",
+                amazonInfo.isEmpty()
+            ) { viewModel.setStoreFront("Amazon") }
         }
     }
     val onDismiss = { viewModel.setStoreFront("") }
@@ -78,6 +85,10 @@ fun SettingsScreen(
         "Itch" -> ItchOverlay(
             onDismiss = onDismiss,
             saveItchSecret = { secret -> viewModel.saveItchSecret(secret) }
+        )
+        "Amazon" -> AmazonOverlay(
+            onDismiss = onDismiss,
+            saveAmazonLogin = { code, verifier -> viewModel.saveAmazonInfo(code, verifier) }
         )
         else -> {}
 

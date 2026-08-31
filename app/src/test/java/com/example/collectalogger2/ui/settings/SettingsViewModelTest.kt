@@ -31,6 +31,7 @@ class SettingsViewModelTest {
         every { mockRepository.epicIdInfo } returns flowOf("initial_epic")
         every { mockRepository.gogUsername } returns flowOf("initial_gog")
         every { mockRepository.itchSecret } returns flowOf("initial_itch")
+        every { mockRepository.amazonIdInfo } returns flowOf("initial_amazon")
 
         viewModel = SettingsViewModel(mockRepository)
     }
@@ -48,6 +49,9 @@ class SettingsViewModelTest {
         }
         viewModel.itchSecret.test {
             assertEquals("initial_itch", awaitItem())
+        }
+        viewModel.amazonInfo.test {
+            assertEquals("initial_amazon", awaitItem())
         }
     }
 
@@ -105,6 +109,19 @@ class SettingsViewModelTest {
         viewModel.saveItchSecret(testSecret)
 
         coVerify { getItchLogin(testSecret, mockRepository) }
+        unmockkStatic("com.example.collectalogger2.ui.settings.LibraryLogInsKt")
+    }
+
+    @Test
+    fun `saveAmazonInfo calls getAmazonLogin`() = runTest {
+        mockkStatic("com.example.collectalogger2.ui.settings.LibraryLogInsKt")
+        coEvery { getAmazonLogin(any(), any(), any()) } returns Unit
+
+        val testCode = "amazon_code"
+        val testVerifier = "amazon_verifier"
+        viewModel.saveAmazonInfo(testCode, testVerifier)
+
+        coVerify { getAmazonLogin(testCode, testVerifier, mockRepository) }
         unmockkStatic("com.example.collectalogger2.ui.settings.LibraryLogInsKt")
     }
 }

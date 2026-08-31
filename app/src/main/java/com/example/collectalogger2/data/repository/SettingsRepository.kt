@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.collectalogger2.util.APIException
+import com.example.collectalogger2.util.libraryObjects.AmazonSource
 import com.example.collectalogger2.util.libraryObjects.EpicSource
 import com.example.collectalogger2.util.libraryObjects.SteamSource
 import kotlinx.coroutines.flow.Flow
@@ -19,6 +20,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val EPIC_ID_INFO = stringPreferencesKey("epic_id_info")
         val GOG_USERNAME = stringPreferencesKey("gog_username")
         val ITCH_SECRET = stringPreferencesKey("itch_secret")
+        val AMAZON_ID_INFO = stringPreferencesKey("amazon_id_info")
     }
     val steamId: Flow<String> =
         dataStore.data.map { preferences ->
@@ -37,6 +39,11 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     val itchSecret: Flow<String> =
         dataStore.data.map { preferences ->
             preferences[ITCH_SECRET] ?: ""
+        }
+
+    val amazonIdInfo: Flow<String> =
+        dataStore.data.map { preferences ->
+            preferences[AMAZON_ID_INFO] ?: ""
         }
     suspend fun getSteamLogin(url: String) {
         val id: String
@@ -70,21 +77,14 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
 
     }
 
-    suspend fun getGogLogin(username: String) {
+    suspend fun getAmazonLogin(code: String, codeVerifier: String) {
         try {
-            saveGogUsername(username)
-            Log.i("GOG username saved!", username)
-        } catch (e: Exception) {
-            Log.e("Failed to save GOG username!", e.message ?: "")
-        }
-    }
-
-    suspend fun getItchLogin(secret: String) {
-        try {
-            saveItchSecret(secret)
-            Log.i("Itch secret saved!", secret)
-        } catch (e: Exception) {
-            Log.e("Failed to save Itch secret!", e.message ?: "")
+            // Exchange the authorization code and PKCE verifier for device tokens
+            val response = AmazonSource.registerDevice(code, codeVerifier)
+            saveAmazonIdInfo(response.toString())
+            Log.i("Amazon login info saved!", response.toString())
+        } catch (ex: Exception) {
+            Log.e("Failed to save Amazon Games info!", ex.message ?: "")
         }
     }
     suspend fun saveSteamId(id: String) {
@@ -98,6 +98,10 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     }
     suspend fun saveItchSecret(secret: String) {
         dataStore.edit { it[ITCH_SECRET] = secret }
+    }
+
+    suspend fun saveAmazonIdInfo(info: String) {
+        dataStore.edit { it[AMAZON_ID_INFO] = info }
     }
 }
 

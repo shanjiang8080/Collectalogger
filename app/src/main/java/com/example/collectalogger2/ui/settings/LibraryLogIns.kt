@@ -3,6 +3,7 @@ package com.example.collectalogger2.ui.settings
 import android.util.Log
 import com.example.collectalogger2.data.repository.SettingsRepository
 import com.example.collectalogger2.util.APIException
+import com.example.collectalogger2.util.libraryObjects.AmazonSource
 import com.example.collectalogger2.util.libraryObjects.EpicSource
 import com.example.collectalogger2.util.libraryObjects.SteamSource
 import org.json.JSONObject
@@ -55,6 +56,17 @@ suspend fun getItchLogin(secret: String, settingsRepository: SettingsRepository)
         Log.i("Itch secret saved!", secret)
     } catch (e: Exception) {
         Log.e("Failed to save Itch secret!", e.message ?: "")
+    }
+}
+
+suspend fun getAmazonLogin(code: String, codeVerifier: String, settingsRepository: SettingsRepository) {
+    try {
+        // Exchange the authorization code and PKCE verifier for device tokens
+        val response = AmazonSource.registerDevice(code, codeVerifier)
+        settingsRepository.saveAmazonIdInfo(response.toString())
+        Log.i("Amazon login info saved!", response.toString())
+    } catch (ex: Exception) {
+        Log.e("Failed to save Amazon Games info!", ex.message ?: "")
     }
 }
 

@@ -93,6 +93,7 @@ import com.example.collectalogger2.R
 import com.example.collectalogger2.data.Game
 import com.example.collectalogger2.data.Genre
 import com.example.collectalogger2.ui.gallery.DialogActionType.CheckNonImportedItems
+import com.example.collectalogger2.ui.overlays.AmazonOverlay
 import com.example.collectalogger2.ui.overlays.EpicOverlay
 import com.example.collectalogger2.ui.overlays.SteamOverlay
 import com.example.collectalogger2.ui.shared.CoverArt
@@ -149,6 +150,7 @@ fun GalleryScreen(
         uiEvents = viewModel.uiEvents,
         saveSteamId = { viewModel.saveSteamId(it) },
         saveEpicId = { viewModel.saveEpicInfo(it) },
+        saveAmazonLogin = { code, verifier -> viewModel.saveAmazonInfo(code, verifier) },
         loadPercentage = loadPercentage,
         toggleSelection = { viewModel.toggleSelection(it) },
         clearSelection = { viewModel.clearSelection() }
@@ -171,6 +173,7 @@ fun GalleryScreenBody(
     uiEvents: SharedFlow<UiEvent>,
     saveSteamId: (String) -> Unit,
     saveEpicId: (String) -> Unit,
+    saveAmazonLogin: (String, String) -> Unit,
     loadPercentage: Float,
     toggleSelection: (Long) -> Unit,
     clearSelection: () -> Unit = {}
@@ -269,6 +272,9 @@ fun GalleryScreenBody(
                     }
                     "Epic Games" -> {
                         EpicOverlay(onDismiss, saveEpicId)
+                    }
+                    "Amazon" -> {
+                        AmazonOverlay(onDismiss, saveAmazonLogin)
                     }
                 }
             }
@@ -761,6 +767,7 @@ private fun GalleryPreview() {
         uiEvents = MutableSharedFlow(),
         saveSteamId = {},
         saveEpicId = {},
+        saveAmazonLogin = { _, _ -> },
         loadPercentage = -1f,
         toggleSelection = {}
     )

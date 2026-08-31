@@ -38,6 +38,9 @@ interface GameDao {
     @Query("SELECT * FROM games WHERE itchId = :itchId")
     fun getGameByItchId(itchId: String): Game?
 
+    @Query("SELECT * FROM games WHERE amazonId = :amazonId")
+    fun getGameByAmazonId(amazonId: String): Game?
+
     @Query("SELECT * FROM games WHERE igdbId = :igdbId")
     fun getGameStreamByIGDBId(igdbId: Long): Flow<Game?>
 

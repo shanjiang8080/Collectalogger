@@ -46,6 +46,9 @@ data class Game(
     val gogId: String = "",
     @ColumnInfo(name = "itchId", defaultValue = "")
     val itchId: String = "",
+    // Amazon-specific id (the entitlement product id)
+    @ColumnInfo(name = "amazonId", defaultValue = "")
+    val amazonId: String = "",
     // List of IGDB screenshot URLs
     @ColumnInfo(name = "screenshots", defaultValue = "")
     val screenshots: List<String> = listOf(),

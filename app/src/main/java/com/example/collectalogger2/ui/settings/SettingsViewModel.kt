@@ -19,11 +19,13 @@ class SettingsViewModel(val settingsRepository: SettingsRepository) : ViewModel(
     private val _currentStoreFront = MutableStateFlow<String>("")
     private val _gogUsername = MutableStateFlow<String>("")
     private val _itchSecret = MutableStateFlow<String>("")
+    private val _amazonInfo = MutableStateFlow<String>("")
     val currentStoreFront = _currentStoreFront.asStateFlow()
     val steamId = _steamId.asStateFlow()
     val epicInfo = _epicInfo.asStateFlow()
     val gogUsername = _gogUsername.asStateFlow()
     val itchSecret = _itchSecret.asStateFlow()
+    val amazonInfo = _amazonInfo.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -31,6 +33,7 @@ class SettingsViewModel(val settingsRepository: SettingsRepository) : ViewModel(
             _epicInfo.value = settingsRepository.epicIdInfo.first()
             _gogUsername.value = settingsRepository.gogUsername.first()
             _itchSecret.value = settingsRepository.itchSecret.first()
+            _amazonInfo.value = settingsRepository.amazonIdInfo.first()
             Log.i("steamid_open", steamId.value)
             Log.i("epicinfo_open", epicInfo.value)
             Log.i("gogusername_open", gogUsername.value)
@@ -50,6 +53,10 @@ class SettingsViewModel(val settingsRepository: SettingsRepository) : ViewModel(
             settingsRepository.itchSecret.collect { id ->
                 _itchSecret.value = id
                 Log.i("itchsecret", id)
+            }
+            settingsRepository.amazonIdInfo.collect { id ->
+                _amazonInfo.value = id
+                Log.i("amazoninfo", id)
             }
         }
     }
@@ -84,6 +91,16 @@ class SettingsViewModel(val settingsRepository: SettingsRepository) : ViewModel(
     fun saveItchSecret(secret: String) {
         viewModelScope.launch(Dispatchers.IO) {
             getItchLogin(secret, settingsRepository)
+        }
+    }
+
+    /**
+     * Saves the Amazon login info to the settings given the authorization code
+     * and the PKCE code verifier used to create the login challenge.
+     */
+    fun saveAmazonInfo(code: String, codeVerifier: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            getAmazonLogin(code, codeVerifier, settingsRepository)
         }
     }
 
