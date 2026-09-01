@@ -14,6 +14,47 @@ class GameWishlistRepository {
         val w1 = WishlistGame(g1, 27.99f, null)
         val w2 = WishlistGame(g2, 14.99f, null)
 
-        return listOf(w1, w2,w1, w2,w1, w2,w1, w2,w1, w2,w1, w2,w1, w2,w1, w2,w1, w2,w1, w2,w1, w2,w1, w2,w1, w2,w1, w2,w1, w2,w1, w2,w1, w2,w1, w2,w1, w2,w1, w2,)
+        return listOf(
+            w1,
+            w2,
+            w1,
+            w2,
+            w1,
+            w2,
+            w1,
+            w2,
+            w1,
+            w2,
+            w1,
+            w2,
+            w1,
+            w2,
+            w1,
+            w2,
+            w1,
+            w2,
+            w1,
+            w2,
+            w1,
+            w2,
+            w1,
+            w2,
+            w1,
+            w2,
+            w1,
+            w2,
+            w1,
+            w2,
+            w1,
+            w2,
+            w1,
+            w2,
+            w1,
+            w2,
+            w1,
+            w2,
+            w1,
+            w2,
+        )
     }
 }

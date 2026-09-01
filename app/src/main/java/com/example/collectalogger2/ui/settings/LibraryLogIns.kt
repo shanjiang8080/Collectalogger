@@ -13,7 +13,7 @@ import org.json.JSONObject
 suspend fun getSteamLogin(url: String, settingsRepository: SettingsRepository) {
     val id: String
     try {
-        id = _getSteamID(url)
+        id = getSteamID(url)
         settingsRepository.saveSteamId(id)
         Log.i("Steam ID saved!", id)
     } catch (e: Exception) {
@@ -74,7 +74,7 @@ suspend fun getAmazonLogin(code: String, codeVerifier: String, settingsRepositor
  * This function takes in a URL like https://steamcommunity.com/id/personnotman/
  * and converts it to the steamID.
  */
-suspend fun _getSteamID(url: String): String {
+suspend fun getSteamID(url: String): String {
     var newUrl = url
     if (newUrl.endsWith("/"))
         newUrl = newUrl.substring(0, newUrl.length - 1)

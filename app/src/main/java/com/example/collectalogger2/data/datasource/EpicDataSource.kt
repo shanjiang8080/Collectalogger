@@ -44,22 +44,22 @@ class EpicDataSource(
         val userInfo = userInfoFlow.first()
         if (userInfo == "") throw AccountException("User is not logged into Epic Games!", libraryName)
         // sets JSON to the thing
-        var userJson = refreshLogin(JSONObject(userInfo))
+        val userJson = refreshLogin(JSONObject(userInfo))
         // after refreshing JSON if applicable, get the list of all games, then iterate through and emit.
 
         // Map of the sandbox name to the appName + namespace + artifactItemId
-        var duplicateGamesMap: MutableMap<String, MutableList<EpicGame>> = mutableMapOf()
+        val duplicateGamesMap: MutableMap<String, MutableList<EpicGame>> = mutableMapOf()
         // Map for duplicate games linking appNames to slugs
-        var duplicateSlugsMap: MutableMap<String, String> = mutableMapOf()
+        val duplicateSlugsMap: MutableMap<String, String> = mutableMapOf()
 
         // Get the full map of items, where key is slug and value is the playtimes.
-        var igdbCallMap = mutableMapOf<String, Pair<Long, String>>()
+        val igdbCallMap = mutableMapOf<String, Pair<Long, String>>()
         // This map is for games that don't get caught by the bulk slug thing.
-        var slugNamespaceCatalogItemIdMap = mutableMapOf<String, Pair<String, String>>()
+        val slugNamespaceCatalogItemIdMap = mutableMapOf<String, Pair<String, String>>()
         // Note that appName from items == artifactId from playtimes
         // Used for linking game to playtime
         // It is the artifactId to name
-        var artifactSlugMap = mutableMapOf<String, String>()
+        val artifactSlugMap = mutableMapOf<String, String>()
         var cursor = ""
         do {
             var params = mapOf(
@@ -67,7 +67,7 @@ class EpicDataSource(
                 "includeCategories" to "applications",
             )
             if (cursor != "") params = params.plus("cursor" to cursor)
-            var itemsResponse = EpicSource.makeAPICall(
+            val itemsResponse = EpicSource.makeAPICall(
                 domain = "library-service.live.use1a.on.epicgames.com",
                 path = "library/api/public/items",
                 isGet = true,
@@ -77,24 +77,24 @@ class EpicDataSource(
                 isJsonArray = false
             ) as JSONObject
             // Get metadata and fill/unfill cursor depending on response
-            var metadata = itemsResponse.getJSONObject("responseMetadata")
+            val metadata = itemsResponse.getJSONObject("responseMetadata")
             if (metadata.has("nextCursor"))
                 cursor = metadata.getString("nextCursor")
             else
                 cursor = ""
             // get the "records" from the object, which is a JSONArray
-            var records = itemsResponse.getJSONArray("records")
+            val records = itemsResponse.getJSONArray("records")
             for (i in 0 until records.length()) {
-                var entry = records.getJSONObject(i)
-                var gameSlug = getSlug(entry.getString("sandboxName"))
+                val entry = records.getJSONObject(i)
+                val gameSlug = getSlug(entry.getString("sandboxName"))
 
-                var namespace = entry.getString("namespace")
-                var catalogItemId = entry.getString("catalogItemId")
-                var appName = entry.getString("appName")
+                val namespace = entry.getString("namespace")
+                val catalogItemId = entry.getString("catalogItemId")
+                val appName = entry.getString("appName")
 
                 // HACK: make live games work
                 if (gameSlug == "live") {
-                    var tempSlug = "$gameSlug$catalogItemId"
+                    val tempSlug = "$gameSlug$catalogItemId"
                     artifactSlugMap[appName] = tempSlug
                     slugNamespaceCatalogItemIdMap[tempSlug] = namespace to catalogItemId
                     // You need a placeholder because if not it won't get imported
@@ -113,8 +113,8 @@ class EpicDataSource(
                         // and artifactSlugMap
                         if (gameSlug in igdbCallMap) {
                             // Remove existing game from existing maps
-                            var pair = slugNamespaceCatalogItemIdMap.remove(gameSlug)
-                            var name = artifactSlugMap.entries.find { it.value == gameSlug }?.key
+                            val pair = slugNamespaceCatalogItemIdMap.remove(gameSlug)
+                            val name = artifactSlugMap.entries.find { it.value == gameSlug }?.key
                             igdbCallMap.remove(gameSlug)
                             artifactSlugMap.remove(name)
                             if (pair != null && name != null) {
@@ -161,7 +161,7 @@ class EpicDataSource(
         } while (cursor != "") // Loop until cursor is gone
 
         // Now, invoke request with the playtime URL and tokens.
-        var playtimeResponse = EpicSource.makeAPICall(
+        val playtimeResponse = EpicSource.makeAPICall(
             domain = "library-service.live.use1a.on.epicgames.com",
             path = "library/api/public/playtime/account/${userJson.get("account_id")}/all",
             isGet = true,
@@ -180,7 +180,7 @@ class EpicDataSource(
             val obj = playtimeResponse.getJSONObject(ii)
             val playTime = obj.getLong("totalTime") / 60
             val appName = obj.getString("artifactId")
-            var slug = artifactSlugMap[appName] ?: ""
+            val slug = artifactSlugMap[appName] ?: ""
             // If the slug is empty, then the appName is not present in the artifactSlugMap,
             // meaning it's a duplicate
             if (slug == "") {
@@ -189,8 +189,8 @@ class EpicDataSource(
                 // so i need to get the app name
                 // currently the duplicate map is a slug -> list<namespace, itemId>
                 // so i need an app name -> slug
-                var newSlug = duplicateSlugsMap[appName]
-                var dupeList = duplicateGamesMap[newSlug]
+                val newSlug = duplicateSlugsMap[appName]
+                val dupeList = duplicateGamesMap[newSlug]
                 var matchingGames = dupeList?.filter { game: EpicGame ->
                     game.appName == appName
                 }
@@ -202,7 +202,7 @@ class EpicDataSource(
                     )
                     // It shouldn't happen since appNames should be unique
                 } else if (matchingGames.size == 1) {
-                    var matchingGame = matchingGames[0]
+                    val matchingGame = matchingGames[0]
                     matchingGame.playTime = playTime
                 }
                 // Even after, duplicates shouldn't be processed until their own pass
@@ -210,17 +210,13 @@ class EpicDataSource(
             }
 
             // Check if the game has been added to IGDB already
-            var epicItem = slugNamespaceCatalogItemIdMap[slug]
-            if (epicItem == null)
-            {
-                continue
-            }
-            var epicId = convertEpicIdToString(epicItem.first, epicItem.second)
-            var epicGame = gameDao.getGameByEpicId(epicId)
+            val epicItem = slugNamespaceCatalogItemIdMap[slug] ?: continue
+            val epicId = convertEpicIdToString(epicItem.first, epicItem.second)
+            val epicGame = gameDao.getGameByEpicId(epicId)
             // If already in the database, skip (but update playtime)
             if (!forceUpdate && epicGame != null) {
                 // Emit the game, updating the playtime
-                var modifiedEpicGame = epicGame.copy(
+                val modifiedEpicGame = epicGame.copy(
                     platform = epicGame.platform.plus("PC"),
                     playTime = maxOf(epicGame.playTime, playTime)
                 )
@@ -245,9 +241,9 @@ class EpicDataSource(
         // Now, once you've skipped duplicate entries for played games
         // Skip duplicate entries for unplayed games
         igdbCallMap.toMap().keys.forEach { key: String ->
-            var pair = igdbCallMap[key]
-            var epicId = pair!!.second
-            var gameFromDb = gameDao.getGameByEpicId(epicId)
+            val pair = igdbCallMap[key]
+            val epicId = pair!!.second
+            val gameFromDb = gameDao.getGameByEpicId(epicId)
             if (!forceUpdate && gameFromDb != null) {
                 // Remove it from the maps
                 igdbCallMap.remove(key)
@@ -261,7 +257,7 @@ class EpicDataSource(
         }
 
 
-        var duplicateSet = mutableSetOf<Long>() // Contains game ids for duplicate handling
+        val duplicateSet = mutableSetOf<Long>() // Contains game ids for duplicate handling
 
         Log.d("EpicDataSource", "Making bulk IGDB call")
         // Have the igdbCallMap
@@ -277,7 +273,7 @@ class EpicDataSource(
         ).forEach { game ->
             if (game.igdbId !in duplicateSet) {
                 emit(GameLoaded(game))
-                var slug = getSlug(game.title)
+                val slug = getSlug(game.title)
                 if (slug in slugNamespaceCatalogItemIdMap) {
                     slugNamespaceCatalogItemIdMap.remove(slug)
                 } else {
@@ -289,23 +285,23 @@ class EpicDataSource(
         // Now, there are a few games left that haven't been caught by the response.
         // Loop through these and use the fallback approach (with Catalog endpoint).
         // But still, make as few IGDB calls as possible.
-        var leftList = slugNamespaceCatalogItemIdMap.keys.toList()
+        val leftList = slugNamespaceCatalogItemIdMap.keys.toList()
         var newMap = mutableMapOf<String, Pair<Long, String>>()
-        var newMapSlugs = mutableMapOf<String, Pair<Long, String>>()
+        val newMapSlugs = mutableMapOf<String, Pair<Long, String>>()
 
 
         // Now, loop through the duplicates and use the Catalog endpoint to fill info.
-        var duplicateLeftList = duplicateGamesMap.keys.toList()
+        val duplicateLeftList = duplicateGamesMap.keys.toList()
         // like with the newMap, this contains found games with slugs paired to playtime and ID
-        for (i in 0 until duplicateLeftList.size) {
+        for (i in duplicateLeftList.indices) {
             // Key is the slug
-            var key = duplicateLeftList[i]
-            var games = duplicateGamesMap[key]
+            val key = duplicateLeftList[i]
+            val games = duplicateGamesMap[key]
             if (games != null) {
-                for (j in 0 until games.size) {
-                    var game = games[j]
-                    var epicId = convertEpicIdToString(game.namespace, game.catalogItemId)
-                    var existingGame = gameDao.getGameByEpicId(epicId)
+                for (j in games.indices) {
+                    val game = games[j]
+                    val epicId = convertEpicIdToString(game.namespace, game.catalogItemId)
+                    val existingGame = gameDao.getGameByEpicId(epicId)
                     if (existingGame != null) {
                         if (game.playTime != existingGame.playTime) {
                             emit(GameLoaded(existingGame.copy(playTime = game.playTime)))
@@ -314,7 +310,7 @@ class EpicDataSource(
                         continue
                     }
                     // Make a request to gather info about the game with the API call.
-                    var catalogResponseRaw = EpicSource.makeAPICall(
+                    val catalogResponseRaw = EpicSource.makeAPICall(
                         domain = "catalog-public-service-prod06.ol.epicgames.com",
                         path = "catalog/api/shared/namespace/${game.namespace}/bulk/items?id=${game.catalogItemId}&country=US&locale=en-US&includeMainGameDetails=true",
                         isGet = true,
@@ -331,13 +327,13 @@ class EpicDataSource(
                     // emit an increment games count
                     emit(IncrementGamesCount)
 
-                    var catalogResponse = catalogResponseRaw.get(game.catalogItemId) as JSONObject
+                    val catalogResponse = catalogResponseRaw.get(game.catalogItemId) as JSONObject
                     // filter out DLCs
                     if (isGameExtra(catalogResponse)) continue
                     // since it isn't, add to the duplicate games map
                     // but with the slugs as the detailed name
-                    var sanitizedTitle = catalogResponse.getString("title").replace("\"", "\\\"")
-                    var sanitizedSlug =
+                    val sanitizedTitle = catalogResponse.getString("title").replace("\"", "\\\"")
+                    val sanitizedSlug =
                         getSlug(catalogResponse.getString("title").replace("\"", ""))
                     // add to both maps
                     Log.d("EpicDataSource", "SANITIZED_TITLE: $sanitizedTitle")
@@ -351,14 +347,14 @@ class EpicDataSource(
 
         }
 
-        for (i in 0 until leftList.size) {
-            var key = leftList[i]
-            var pair = slugNamespaceCatalogItemIdMap[key] as Pair
-            var epicIdString = convertEpicIdToString(pair.first, pair.second)
-            var playtime = igdbCallMap[key]!!.first
+        for (i in leftList.indices) {
+            val key = leftList[i]
+            val pair = slugNamespaceCatalogItemIdMap[key] as Pair
+            val epicIdString = convertEpicIdToString(pair.first, pair.second)
+            val playtime = igdbCallMap[key]!!.first
 
             // For each remaining game, make an API call to items.
-            var catalogResponseRaw = (EpicSource.makeAPICall(
+            val catalogResponseRaw = (EpicSource.makeAPICall(
                 domain = "catalog-public-service-prod06.ol.epicgames.com",
                 path = "catalog/api/shared/namespace/${pair.first}/bulk/items?id=${pair.second}&country=US&locale=en-US&includeMainGameDetails=true",
                 isGet = true,
@@ -369,12 +365,12 @@ class EpicDataSource(
             // emit an increment games count
             emit(IncrementGamesCount)
 
-            var catalogResponse = catalogResponseRaw.get(pair.second) as JSONObject
+            val catalogResponse = catalogResponseRaw.get(pair.second) as JSONObject
 
             if (isGameExtra(catalogResponse)) continue
 
-            var sanitizedTitle = catalogResponse.getString("title").replace("\"", "\\\"")
-            var sanitizedSlug = getSlug(catalogResponse.getString("title").replace("\"", ""))
+            val sanitizedTitle = catalogResponse.getString("title").replace("\"", "\\\"")
+            val sanitizedSlug = getSlug(catalogResponse.getString("title").replace("\"", ""))
             newMap[sanitizedTitle] = playtime to epicIdString
             newMapSlugs[sanitizedSlug] = playtime to epicIdString
         }
@@ -395,7 +391,7 @@ class EpicDataSource(
         ).forEach { game ->
             if (game.igdbId !in duplicateSet) {
                 emit(GameLoaded(game, false))
-                var title = game.title
+                val title = game.title
                 if (title in newMap) {
                     newMap.remove(title)
                     newMapSlugs.remove(getSlug(title))
@@ -420,7 +416,7 @@ class EpicDataSource(
         ).forEach { game ->
             if (game.igdbId !in duplicateSet) {
                 emit(GameLoaded(game))
-                var slug = getSlug(game.title)
+                val slug = getSlug(game.title)
                 if (slug in newMapSlugs) {
                     newMapSlugs.remove(slug)
                     newMap.remove(game.title)
@@ -435,7 +431,7 @@ class EpicDataSource(
         // Remove all names filtered out in the last pass
         newMap = newMap.filter { name -> getSlug(name.key) in newMapSlugs }.toMutableMap()
         // contains keys caught by alternative names, will be subtracted with newMap
-        var newKeys = mutableListOf<String>()
+        val newKeys = mutableListOf<String>()
 
         Log.d("EpicDataSource", "Making bulk IGDB call for fallbacks with alternative names")
         callIGDB(
@@ -445,10 +441,10 @@ class EpicDataSource(
             gamePrefix = "",
             customField = "alternative_names.name",
             customFieldLogic = { jsonObj ->
-                var array = jsonObj.getJSONArray("alternative_names")
+                val array = jsonObj.getJSONArray("alternative_names")
                 for (i in 0 until array.length()) {
-                    var altName = array.getJSONObject(i)
-                    var name = altName.getString("name")
+                    val altName = array.getJSONObject(i)
+                    val name = altName.getString("name")
                     // If the alternative name is found, add to newKeys and place into
                     if (name in newMap.keys) {
                         newKeys.add(name)
@@ -473,7 +469,7 @@ class EpicDataSource(
         emit(FinishGamesCount)
 
         // Log not imported games (often unstable/beta versions)
-        val missingGames = newMap.minus(newKeys)
+        val missingGames = newMap.minus(newKeys.toSet())
 
         // emit non-imported games
         // Turn non-imported game strings into temporary game objects with the names of the games
@@ -506,10 +502,10 @@ class EpicDataSource(
 
     private fun isGameExtra(catalogResponse: JSONObject): Boolean {
         // sift out DLCs and such: parse through categories
-        var categories = catalogResponse.get("categories") as JSONArray
-        var categoriesList = mutableListOf<String>()
+        val categories = catalogResponse.get("categories") as JSONArray
+        val categoriesList = mutableListOf<String>()
         for (j in 0 until categories.length()) {
-            var categoryObj = categories.get(j) as JSONObject
+            val categoryObj = categories.get(j) as JSONObject
             categoriesList.add(categoryObj.getString("path"))
         }
         if (!categoriesList.contains("applications")) {
@@ -531,13 +527,8 @@ class EpicDataSource(
             catalogResponse.getJSONArray("releaseInfo").getJSONObject(0).getJSONArray("platform")
         val platformString = platforms.join("").lowercase()
         // if it's Android or iOS, skip
-        if (
-            platformString.contains("android") ||
-            platformString.contains("ios")
-        ) {
-            return true
-        }
-        return false
+        return platformString.contains("android") ||
+                platformString.contains("ios")
     }
 
     override fun addToSourceLibrary(
@@ -558,12 +549,12 @@ class EpicDataSource(
     private suspend fun refreshLogin(json: JSONObject): JSONObject {
         // check the expiration date
         // Minus one hour to prevent it from expiring midway through getting games
-        var expiry = Instant.parse(json.get("expires_at") as String).minus(Duration.ofHours(1))
-        var now = Instant.now()
+        val expiry = Instant.parse(json.get("expires_at") as String).minus(Duration.ofHours(1))
+        val now = Instant.now()
         // if not expired, who cares!
         if (now.isBefore(expiry)) return json
         // if it is expired, check to see if the refresh token is expired
-        var refreshExpiry = Instant.parse(json.get("refresh_expires_at") as String)
+        val refreshExpiry = Instant.parse(json.get("refresh_expires_at") as String)
         // if so, throw an exception
         if (!now.isBefore(refreshExpiry))
             throw AccountExpiryException(

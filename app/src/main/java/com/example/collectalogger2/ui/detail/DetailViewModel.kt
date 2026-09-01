@@ -27,7 +27,7 @@ class DetailViewModel(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private val _game = MutableStateFlow<Game?>(null)
-    private val _currentDialog = MutableStateFlow<String>("")
+    private val _currentDialog = MutableStateFlow("")
     val game = _game.asStateFlow()
     private val _gameGenres = MutableStateFlow<List<Genre>>(emptyList())
     val gameGenres = _gameGenres.asStateFlow()

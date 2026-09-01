@@ -51,12 +51,12 @@ class SteamDataSource(var userIdFlow: Flow<String>, gameDao: GameDao) : RemoteLi
         for (i in 0 until games.length()) {
             val apiGame = games.getJSONObject(i)
 
-            var steamAppID: Long = (apiGame.get("appid") as Integer).toLong()
+            val steamAppID: Long = (apiGame.get("appid") as Int).toLong()
             // Quick check: If the Steam version of the game exists in the database already, skip
-            var steamGame = gameDao.getGameBySteamId(steamAppID)
-            var newPlayTime = (apiGame.get("playtime_forever") as Integer).toLong()
+            val steamGame = gameDao.getGameBySteamId(steamAppID)
+            val newPlayTime = (apiGame.get("playtime_forever") as Int).toLong()
             if (!forceUpdate && steamGame != null) {
-                var modifiedSteamGame = steamGame.copy(
+                val modifiedSteamGame = steamGame.copy(
                     platform = steamGame.platform.plus("PC"),
                     playTime = maxOf(steamGame.playTime, newPlayTime)
                 )
@@ -65,7 +65,7 @@ class SteamDataSource(var userIdFlow: Flow<String>, gameDao: GameDao) : RemoteLi
                     emit(GameLoaded(modifiedSteamGame))
                 continue
             }
-            steamIdMap.put("$steamAppID", newPlayTime to "$steamAppID")
+            steamIdMap["$steamAppID"] = newPlayTime to "$steamAppID"
         }
         callIGDB(
             gameIdentifiers = steamIdMap,

@@ -10,20 +10,20 @@ import org.json.JSONObject
  */
 class GenreDataSource {
     suspend fun getGenres(): List<Genre> {
-        var request =
+        val request =
             """
                     fields id, name;
                     limit 500;
                 """.trimIndent()
         Log.d("IGDBParser", request)
-        var igdbResponse = IGDBSource.makeAPICall(
+        val igdbResponse = IGDBSource.makeAPICall(
             endpoint = "genres",
             request
         )
-        Log.d("GenreDataSource", "Response: ${igdbResponse}")
-        var newGenres: MutableList<Genre> = mutableListOf()
+        Log.d("GenreDataSource", "Response: $igdbResponse")
+        val newGenres: MutableList<Genre> = mutableListOf()
         for (i in 0 until igdbResponse.length()) {
-            var genre: JSONObject = igdbResponse.getJSONObject(i)
+            val genre: JSONObject = igdbResponse.getJSONObject(i)
             newGenres.add(Genre(name = genre.getString("name"), igdbId = genre.getInt("id")))
         }
         return newGenres.toList()

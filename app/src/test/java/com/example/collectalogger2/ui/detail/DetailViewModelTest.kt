@@ -98,7 +98,7 @@ class DetailViewModelTest {
 
         // 3. Verify repository was called with isFavorite = true
         io.mockk.coVerify {
-            mockRepository.updateGame(match { it.isFavorite == true })
+            mockRepository.updateGame(match { it.isFavorite })
         }
     }
 

@@ -10,12 +10,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
+import kotlin.time.Duration.Companion.milliseconds
 
 object SteamSource {
     private val client = HttpClient(Android)
     private val mutex = Mutex()
     private var lastRequestTime = 0L
-    private const val RATE_LIMIT_DELAY_MS = 300L // Not formally necessary but probably not a bottleneck
+    private val RATE_LIMIT_DELAY = 300.milliseconds // Not formally necessary but probably not a bottleneck
 
     /**
      * This method creates an API call to Steam given two endpoints
@@ -31,11 +32,11 @@ object SteamSource {
     ): JSONObject {
         mutex.withLock {
             val now = System.currentTimeMillis()
-            val elapsed = now - lastRequestTime
-            if (elapsed < RATE_LIMIT_DELAY_MS) {
-                delay(RATE_LIMIT_DELAY_MS - elapsed)
+            val elapsed = (now - lastRequestTime).milliseconds
+            if (elapsed < RATE_LIMIT_DELAY) {
+                delay(RATE_LIMIT_DELAY - elapsed)
             }
-            lastRequestTime = System.currentTimeMillis()
+            lastRequestTime = now
 
             val steamResponse: String
             try {

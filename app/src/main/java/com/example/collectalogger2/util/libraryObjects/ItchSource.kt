@@ -10,6 +10,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
+import kotlin.time.Duration.Companion.milliseconds
 
 
 object ItchSource {
@@ -18,7 +19,7 @@ object ItchSource {
     private var lastRequestTime = 0L
 
     // Not sure of the precise rate limit but this seems safe
-    private const val RATE_LIMIT_DELAY_MS = 500L
+    private val RATE_LIMIT_DELAY = 500.milliseconds
 
     suspend fun makeAPICall(
         secret: String,
@@ -26,11 +27,11 @@ object ItchSource {
     ): JSONObject {
         mutex.withLock {
             val now = System.currentTimeMillis()
-            val elapsed = now - lastRequestTime
-            if (elapsed < RATE_LIMIT_DELAY_MS) {
-                delay(RATE_LIMIT_DELAY_MS - elapsed)
+            val elapsed = (now - lastRequestTime).milliseconds
+            if (elapsed < RATE_LIMIT_DELAY) {
+                delay(RATE_LIMIT_DELAY - elapsed)
             }
-            lastRequestTime = System.currentTimeMillis()
+            lastRequestTime = now
 
             val itchResponse: String
             try {

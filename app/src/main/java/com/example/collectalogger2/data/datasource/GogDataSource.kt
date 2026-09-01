@@ -27,7 +27,7 @@ class GogDataSource(var usernameFlow: Flow<String>, gameDao: GameDao) :
         val gogIdMap = mutableMapOf<String, Pair<Long, String>>()
         // Make the API call
         var page = 1
-        var pages = 0
+        var pages: Int
         var countEmitted = false
         do {
             val jsonObject = GogSource.makeAPICall(
@@ -39,7 +39,7 @@ class GogDataSource(var usernameFlow: Flow<String>, gameDao: GameDao) :
                 countEmitted = true
             }
             pages = jsonObject.getInt("pages")
-            var items = jsonObject.getJSONObject("_embedded").getJSONArray("items")
+            val items = jsonObject.getJSONObject("_embedded").getJSONArray("items")
             for (i in 0 until items.length()) {
                 val item = items.getJSONObject(i)
                 val game = item.getJSONObject("game")
@@ -53,7 +53,7 @@ class GogDataSource(var usernameFlow: Flow<String>, gameDao: GameDao) :
                 val id = game.getString("id")
                 val existingGame = gameDao.getGameByGogId(id)
                 if (!forceUpdate && existingGame != null) {
-                    var modifiedGame = existingGame.copy(
+                    val modifiedGame = existingGame.copy(
                         platform = existingGame.platform.plus("PC"),
                         playTime = maxOf(existingGame.playTime, playTime)
                     )

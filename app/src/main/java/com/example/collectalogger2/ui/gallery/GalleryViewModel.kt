@@ -97,7 +97,7 @@ class GalleryViewModel(
             genre = getList(savedStateHandle, "genre"),
             developer = getList(savedStateHandle, "developer"),
             publisher = getList(savedStateHandle, "publisher"),
-            isFavorite = savedStateHandle.get<Boolean?>("isFavorite")
+            isFavorite = savedStateHandle.get("isFavorite")
         )
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -192,8 +192,8 @@ class GalleryViewModel(
                 repository.deleteGame(game)
             }
             Log.i("GalleryViewModel", "All games purged from database!")
-            _uiState.value = _uiState.value.copy(games = listOf<Game>())
-            _cachedGames.value = listOf<Game>()
+            _uiState.value = _uiState.value.copy(games = listOf())
+            _cachedGames.value = listOf()
         }
     }
     // UPDATE WHEN ADDING LIBRARIES
@@ -227,7 +227,7 @@ class GalleryViewModel(
     }
 
     fun getSearchedGamesList(search: String): List<Game> {
-        if (search.isEmpty()) return listOf<Game>()
+        if (search.isEmpty()) return listOf()
         val filteredGames =
             cachedGames.value.filter { it.title.contains(search, ignoreCase = true) }
         return filteredGames

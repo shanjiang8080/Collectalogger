@@ -68,14 +68,14 @@ object AmazonSource {
         "&pageId=amzn_sonic_games_launcher" +
         "&openid.oa2.code_challenge="
 
-    // Not sure what key this is but it's some key from Amazon.Fuel.Plugin.Entitlement.dll
+    // Not sure what key this is, but it's some key from Amazon.Fuel.Plugin.Entitlement.dll
     // (same comment as Playnite's)
     private const val ENTITLEMENTS_KEY_ID = "d5dc8b8b-86c8-4fc4-ae93-18c0def5314d"
 
     private val client = HttpClient(Android)
     private val mutex = Mutex()
     private var lastRequestTime = 0L
-    private const val RATE_LIMIT_DELAY_MS = 250L
+    private val RATE_LIMIT_DELAY = 250.milliseconds
 
     /**
      * Generates a PKCE code verifier, a random string of 45 chars
@@ -210,11 +210,11 @@ object AmazonSource {
     private suspend fun postRequest(url: String, customHeaders: Map<String, String>, body: String): String {
         mutex.withLock {
             val now = System.currentTimeMillis()
-            val elapsed = now - lastRequestTime
-            if (elapsed < RATE_LIMIT_DELAY_MS) {
-                delay((RATE_LIMIT_DELAY_MS - elapsed).milliseconds)
+            val elapsed = (now - lastRequestTime).milliseconds
+            if (elapsed < RATE_LIMIT_DELAY) {
+                delay(RATE_LIMIT_DELAY - elapsed)
             }
-            lastRequestTime = System.currentTimeMillis()
+            lastRequestTime = now
 
             try {
                 val response = client.post(url) {

@@ -14,12 +14,12 @@ import kotlinx.coroutines.launch
 
 
 class SettingsViewModel(val settingsRepository: SettingsRepository) : ViewModel() {
-    private val _steamId = MutableStateFlow<String>("")
-    private val _epicInfo = MutableStateFlow<String>("")
-    private val _currentStoreFront = MutableStateFlow<String>("")
-    private val _gogUsername = MutableStateFlow<String>("")
-    private val _itchSecret = MutableStateFlow<String>("")
-    private val _amazonInfo = MutableStateFlow<String>("")
+    private val _steamId = MutableStateFlow("")
+    private val _epicInfo = MutableStateFlow("")
+    private val _currentStoreFront = MutableStateFlow("")
+    private val _gogUsername = MutableStateFlow("")
+    private val _itchSecret = MutableStateFlow("")
+    private val _amazonInfo = MutableStateFlow("")
     val currentStoreFront = _currentStoreFront.asStateFlow()
     val steamId = _steamId.asStateFlow()
     val epicInfo = _epicInfo.asStateFlow()

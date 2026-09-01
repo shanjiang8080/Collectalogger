@@ -15,7 +15,7 @@ class Converters {
 
     @TypeConverter
     fun toGenres(data: String): Set<Int> {
-        var genreSet: MutableSet<Int> = mutableSetOf()
+        val genreSet: MutableSet<Int> = mutableSetOf()
         data.split(",").forEach { genreId ->
             if (genreId.isNotEmpty())
                 genreSet.add(genreId.toInt())

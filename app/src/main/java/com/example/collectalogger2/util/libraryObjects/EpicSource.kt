@@ -14,12 +14,13 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import org.json.JSONObject
+import kotlin.time.Duration.Companion.milliseconds
 
 object EpicSource {
     private val client = HttpClient(Android)
     private val mutex = Mutex()
     private var lastRequestTime = 0L
-    private const val RATE_LIMIT_DELAY_MS = 10L // Who knows the real rate limit ¯\_(ツ)_/¯
+    private val RATE_LIMIT_DELAY = 10.milliseconds // Who knows the real rate limit ¯\_(ツ)_/¯
 
     /**
      * This method creates an API call to Epic Games with a domain, path, headers,
@@ -42,11 +43,11 @@ object EpicSource {
     ): Any {
         mutex.withLock {
             val now = System.currentTimeMillis()
-            val elapsed = now - lastRequestTime
-            if (elapsed < RATE_LIMIT_DELAY_MS) {
-                delay(RATE_LIMIT_DELAY_MS - elapsed)
+            val elapsed = (now - lastRequestTime).milliseconds
+            if (elapsed < RATE_LIMIT_DELAY) {
+                delay(RATE_LIMIT_DELAY - elapsed)
             }
-            lastRequestTime = System.currentTimeMillis()
+            lastRequestTime = now
 
             val epicResponse: String
             try {

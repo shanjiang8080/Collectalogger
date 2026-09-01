@@ -21,7 +21,7 @@ fun EpicOverlay(
     onDismiss: () -> Unit,
     saveEpicID: (String) -> Unit
 ) {
-    var hasHandledResponse = remember { mutableStateOf(false) }
+    val hasHandledResponse = remember { mutableStateOf(false) }
     val onContentReceived: (String) -> Unit = { html ->
         if (!hasHandledResponse.value) {
             hasHandledResponse.value = true

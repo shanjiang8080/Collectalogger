@@ -27,9 +27,9 @@ class ItchDataSource(var secretFlow: Flow<String>, gameDao: GameDao) :
         var page = 1
         var jsonObject: JSONObject
         // URL as key, playtime (0) and itchId as value
-        var itchIdMap = mutableMapOf<String, Pair<Long, String>>()
+        val itchIdMap = mutableMapOf<String, Pair<Long, String>>()
         // A map resolving ids to game names
-        var idNameMap = mutableMapOf<String, String>()
+        val idNameMap = mutableMapOf<String, String>()
         do {
             jsonObject = ItchSource.makeAPICall(secret, page)
             if (jsonObject.get("owned_keys") is JSONObject) break
@@ -40,8 +40,8 @@ class ItchDataSource(var secretFlow: Flow<String>, gameDao: GameDao) :
                 val jsonItem = ownedKeys.getJSONObject(i)
                 val jsonGame = jsonItem.getJSONObject("game")
                 if (jsonGame.getString("classification") != "game") continue
-                itchIdMap.put(jsonGame.getString("url"), 0L to "${jsonGame.getInt("id")}")
-                idNameMap.put("${jsonGame.getInt("id")}", jsonGame.getString("title"))
+                itchIdMap[jsonGame.getString("url")] = 0L to "${jsonGame.getInt("id")}"
+                idNameMap["${jsonGame.getInt("id")}"] = jsonGame.getString("title")
             }
         } while (jsonObject.has("owned_keys") && jsonObject.getJSONArray("owned_keys")
                 .length() != 0
@@ -69,9 +69,9 @@ class ItchDataSource(var secretFlow: Flow<String>, gameDao: GameDao) :
 
         // idNameMap contains leftover games
         // try to fallback before giving up
-        var fallbackMap = mutableMapOf<String, Pair<Long, String>>()
+        val fallbackMap = mutableMapOf<String, Pair<Long, String>>()
         idNameMap.forEach { game ->
-            fallbackMap.put(game.value, 0L to game.key)
+            fallbackMap[game.value] = 0L to game.key
         }
         callIGDB(
             gameIdentifiers = fallbackMap,

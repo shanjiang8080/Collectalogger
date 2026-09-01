@@ -55,7 +55,7 @@ abstract class RemoteLibraryDataSource(val gameDao: GameDao) {
      * "The", "An", or "A" at the beginning, if there is one.
      */
     internal fun getSortingName(name: String): String {
-        var nameWords = name.split(" ")
+        val nameWords = name.split(" ")
         // don't get rid of the whole thing!
         if (nameWords.size <= 1) return name
         if (nameWords[0].lowercase() in setOf("a", "an", "the"))
@@ -91,16 +91,16 @@ abstract class RemoteLibraryDataSource(val gameDao: GameDao) {
         gameJSONPath: (json: JSONObject) -> JSONObject,
         includeUpdates: Boolean = false,
         platform: String = "PC"): List<Game> {
-        var gameList = mutableListOf<Game>()
+        val gameList = mutableListOf<Game>()
         bulkCall(gameIdentifiers, 500) { gamesSnippet ->
-            var updateParam = if (includeUpdates) {
+            val updateParam = if (includeUpdates) {
                 if (endpoint != "games") "& game.game_type != (1, 5, 13, 2)"
                 else "& game_type != (1, 5, 13, 2)"
             } else {
                 if (endpoint != "games") "& game.parent_game = null"
                 else "& parent_game = null"
             }
-            var request =
+            val request =
                 """
                     fields
                     ${if (customFieldIsGameAttribute && endpoint != "games") "game.$customField," else "${customField},"}
@@ -121,28 +121,28 @@ abstract class RemoteLibraryDataSource(val gameDao: GameDao) {
                     limit 500;
                 """.trimIndent()
             Log.d("IGDBParser", request)
-            var igdbResponse = IGDBSource.makeAPICall(
+            val igdbResponse = IGDBSource.makeAPICall(
                 endpoint,
                 request
             )
             Log.d("IGDBParser", "Response length: ${igdbResponse.length()}")
             for (i in 0 until igdbResponse.length()) {
-                var igdbResponseObj = gameJSONPath(igdbResponse.get(i) as JSONObject)
+                val igdbResponseObj = gameJSONPath(igdbResponse.get(i) as JSONObject)
                 if (!igdbResponseObj.has("name")) {
                     Log.w("IGDBParser", "Missing name in response: $igdbResponse")
                     continue
                 }
                 // Add the info to the Game object
                 var customFieldInstance: String
-                if (customFieldLogic == null) {
-                    customFieldInstance = if (customFieldIsGameAttribute && endpoint != "games") {
+                customFieldInstance = if (customFieldLogic == null) {
+                    if (customFieldIsGameAttribute && endpoint != "games") {
                         if (customField != "") igdbResponseObj.getString(customField) else ""
                     } else {
                         if (customField != "") igdbResponse.getJSONObject(i)
                             .getString(customField) else ""
                     }
                 } else {
-                    customFieldInstance = customFieldLogic(igdbResponseObj)
+                    customFieldLogic(igdbResponseObj)
                 }
 
                 // Add value pair objects
@@ -159,37 +159,37 @@ abstract class RemoteLibraryDataSource(val gameDao: GameDao) {
                 }
 
 
-                var title = igdbResponseObj.getString("name")
-                var igdbId = igdbResponseObj.getLong("id")
-                var description = if (igdbResponseObj.has("summary")) igdbResponseObj.getString("summary") else ""
-                var cover = if (igdbResponseObj.has("cover")) igdbResponseObj.get("cover") as JSONObject else null
-                var artworks = if (igdbResponseObj.has("artworks")) igdbResponseObj.get("artworks") as JSONArray else null
-                var screenshots = if (igdbResponseObj.has("screenshots")) igdbResponseObj.get("screenshots") as JSONArray else null
-                var involvedCompanies = if (igdbResponseObj.has("involved_companies")) igdbResponseObj.get("involved_companies") as JSONArray else null
+                val title = igdbResponseObj.getString("name")
+                val igdbId = igdbResponseObj.getLong("id")
+                val description = if (igdbResponseObj.has("summary")) igdbResponseObj.getString("summary") else ""
+                val cover = if (igdbResponseObj.has("cover")) igdbResponseObj.get("cover") as JSONObject else null
+                val artworks = if (igdbResponseObj.has("artworks")) igdbResponseObj.get("artworks") as JSONArray else null
+                val screenshots = if (igdbResponseObj.has("screenshots")) igdbResponseObj.get("screenshots") as JSONArray else null
+                val involvedCompanies = if (igdbResponseObj.has("involved_companies")) igdbResponseObj.get("involved_companies") as JSONArray else null
 
                 // get screenshots
-                var screenshotList: MutableList<String> = mutableListOf()
+                val screenshotList: MutableList<String> = mutableListOf()
                 for (i in 0 until minOf(screenshots?.length() ?: 0, 5)) {
-                    var screenshot = screenshots!![i] as JSONObject
+                    val screenshot = screenshots!![i] as JSONObject
                     screenshotList.add("https://images.igdb.com/igdb/image/upload/t_720p/${screenshot.get("image_id")}.jpg")
                 }
 
                 // get genres
-                var genreList = if (igdbResponseObj.has("genres")) igdbResponseObj.getJSONArray("genres") else null
-                var genres: MutableSet<Int> = mutableSetOf()
+                val genreList = if (igdbResponseObj.has("genres")) igdbResponseObj.getJSONArray("genres") else null
+                val genres: MutableSet<Int> = mutableSetOf()
                 if (genreList != null) {
                     for (i in 0 until genreList.length()) {
-                        var genre = genreList[i] as JSONObject
+                        val genre = genreList[i] as JSONObject
                         if (genre.has("name")) genres.add(genre.getInt("id"))
                     }
                 }
 
                 // get the developers/publishers
-                var developers: MutableList<String> = mutableListOf()
-                var publishers: MutableList<String> = mutableListOf()
+                val developers: MutableList<String> = mutableListOf()
+                val publishers: MutableList<String> = mutableListOf()
                 for (i in 0 until (involvedCompanies?.length() ?: 0)) {
-                    var company = involvedCompanies!![i] as JSONObject
-                    var companyName = (company.get("company") as JSONObject).getString("name")
+                    val company = involvedCompanies!![i] as JSONObject
+                    val companyName = (company.get("company") as JSONObject).getString("name")
                     if (company.getBoolean("developer")) developers.add(companyName)
                     if (company.getBoolean("publisher")) publishers.add(companyName)
                 }
@@ -231,10 +231,10 @@ suspend fun bulkCall(games: Map<String, Any>, groupBy: Int = 10, action: suspend
     val gamesMap: MutableMap<String, Any> = games.toMutableMap()
     while (gamesMap.isNotEmpty()) {
         // Get the number of games left
-        var gamesLeftClamped = minOf(groupBy, gamesMap.size)
+        val gamesLeftClamped = minOf(groupBy, gamesMap.size)
         // Get the keys/items for this iteration
-        var iterationKeys = gamesMap.keys.toList().subList(0, gamesLeftClamped)
-        var iterationItems = gamesMap.toList().subList(0, gamesLeftClamped)
+        val iterationKeys = gamesMap.keys.toList().subList(0, gamesLeftClamped)
+        val iterationItems = gamesMap.toList().subList(0, gamesLeftClamped)
         // Give the items to the action as a map
         action(iterationItems.toMap())
         // afterwards, remove the games from the map then

@@ -83,9 +83,9 @@ fun DetailEditScreen(
     val gameGenres by viewModel.gameGenres.collectAsStateWithLifecycle()
     val allGameGenres by viewModel.allGameGenres.collectAsStateWithLifecycle()
 
-    realGame?.let {
+    realGame?.let { game ->
         DetailEditScreenBody(
-            game = it,
+            game = game,
             gameGenres = gameGenres,
             allGameGenres = allGameGenres,
             onNavigateBack = onNavigateBack,
@@ -209,7 +209,7 @@ fun DetailEditScreenBody(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    Row() {
+                    Row {
                         AnnotatedButton(
                             onClick = {
                                 pickMedia.launch(PickVisualMediaRequest(PickVisualMedia.ImageOnly))
@@ -374,7 +374,7 @@ private fun SetItemCombo(
                     TextField(
                         value = item,
                         onValueChange = {
-                            var mutableList = itemList.toMutableList()
+                            val mutableList = itemList.toMutableList()
                             mutableList[index] = it
                             onValueChange(mutableList)
                         },
@@ -386,7 +386,7 @@ private fun SetItemCombo(
                     )
                     IconButton(
                         onClick = {
-                            var mutableList = itemList.toMutableList()
+                            val mutableList = itemList.toMutableList()
                             mutableList.removeAt(index)
                             onValueChange(mutableList)
                         },
@@ -520,7 +520,7 @@ private fun DetailEditScreenPreview() {
         Genre("Simulation", 0, 0)
     )
     DetailEditScreenBody(
-        game, gameGenres, listOf(), {}, { it1, it2, it3, it4, it5, it6 -> }
+        game, gameGenres, listOf(), {}, { _, _, _, _, _, _ -> }
     )
 }
 
@@ -550,7 +550,7 @@ private fun DetailEditScreenPreviewDiffScreen() {
         Genre("Simulation", 0, 0)
     )
     DetailEditScreenBody(
-        game, gameGenres, listOf(), {}, { it1, it2, it3, it4, it5, it6 -> }
+        game, gameGenres, listOf(), {}, { _, _, _, _, _, _ -> }
     )
 }
 

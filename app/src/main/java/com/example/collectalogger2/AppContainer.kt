@@ -42,6 +42,7 @@ class AppDataContainer(private val context: Context) : AppContainer {
         GameLibraryRepository(
             remoteLibraryDataSources = emptyList<RemoteLibraryDataSource>()
                 // UPDATE WHEN ADDING LIBRARIES
+                .asSequence()
                 .plus(
                     SteamDataSource(
                         userIdFlow = settingsRepository.steamId,
@@ -72,7 +73,8 @@ class AppDataContainer(private val context: Context) : AppContainer {
                         userInfoSetter = { str -> settingsRepository.saveAmazonIdInfo(str) },
                         gameDao = gameDao
                     )
-                ),
+                )
+                .toList(),
             localDataSource = LocalDataSource(),
             genreDataSource = GenreDataSource(),
             gameDao = gameDao,

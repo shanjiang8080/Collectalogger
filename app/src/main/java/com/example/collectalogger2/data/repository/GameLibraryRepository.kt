@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 
 // These events can be observed in the eventFlow
@@ -52,7 +53,7 @@ class GameLibraryRepository(
     var genreFlow: StateFlow<List<Genre>> = _genreFlow.asStateFlow()
 
     // The load percentage as a float from 0-1, or -1 if not loading
-    private var _loadPercentage = MutableStateFlow<Float>(-1f)
+    private var _loadPercentage = MutableStateFlow(-1f)
     var loadPercentage = _loadPercentage.asStateFlow()
 
     // For event emission
@@ -61,7 +62,7 @@ class GameLibraryRepository(
 
     init {
         CoroutineScope(Dispatchers.IO).launch {
-            genreDao.getAllGenresFlow().collect { it ->
+            genreDao.getAllGenresFlow().collect {
                 _genreFlow.value = it
                 if (_genreFlow.value.isEmpty()) {
                     genreDataSource.getGenres().forEach { genre ->
@@ -76,7 +77,7 @@ class GameLibraryRepository(
 
     fun getGenreByIGDBId(id: Int): Genre? {
         // search through the list
-        var filteredGenreList = genreFlow.value.filter { genre ->
+        val filteredGenreList = genreFlow.value.filter { genre ->
             return@filter genre.igdbId == id
         }
         return if (filteredGenreList.isEmpty()) null
@@ -85,7 +86,7 @@ class GameLibraryRepository(
 
     fun getGenreById(id: Int): Genre? {
         // search through the list
-        var filteredGenreList = genreFlow.value.filter { genre ->
+        val filteredGenreList = genreFlow.value.filter { genre ->
             return@filter genre.id == id
         }
         return if (filteredGenreList.isEmpty()) null
@@ -106,9 +107,9 @@ class GameLibraryRepository(
 
     fun getGameById(id: Long): Game? = gameDao.getGame(id)
 
-    fun getGameByIGDBId(IGDBId: Long): Game? = gameDao.getGameByIGDBId(IGDBId)
+    fun getGameByIGDBId(igdbId: Long): Game? = gameDao.getGameByIGDBId(igdbId)
 
-    fun getGameStreamByIGDBId(IGDBId: Long): Flow<Game?> = gameDao.getGameStreamByIGDBId(IGDBId)
+    fun getGameStreamByIGDBId(igdbId: Long): Flow<Game?> = gameDao.getGameStreamByIGDBId(igdbId)
 
     suspend fun insertGame(game: Game) = gameDao.insert(game)
 
@@ -142,7 +143,7 @@ class GameLibraryRepository(
                         .collect { gameEvent ->
                             when (gameEvent) {
                                 is GameEvent.GameLoaded -> {
-                                    var game = gameEvent.game
+                                    val game = gameEvent.game
                                     if (gameEvent.incrementGameCount) {
                                         // Increment the actualGamesCount for percentage bar
                                         actualGamesCount++
@@ -186,7 +187,7 @@ class GameLibraryRepository(
                                     } else {
                                         newGames++
                                         // Set the basic play status based on playtime
-                                        var newGame = if (game.playTime > 0) {
+                                        val newGame = if (game.playTime > 0) {
                                             game.copy(status = PlayStatus.Played)
                                         } else {
                                             game.copy(status = PlayStatus.Unplayed)
@@ -257,7 +258,7 @@ class GameLibraryRepository(
                         throw e
                     }
                     retriesLeft--
-                    delay(5000) // Retry with delay
+                    delay(5000.milliseconds) // Retry with delay
                     continue
                 }
                 break

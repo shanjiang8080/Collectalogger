@@ -1,11 +1,11 @@
 package com.example.collectalogger2.util
 
 object PlayStatus {
-    val Unplayed = "Unplayed"
-    val Played = "Played"
-    val Planned = "Plan to Play"
-    val Completed = "Completed"
-    val Beaten = "Beaten"
-    val Abandoned = "Abandoned"
-    val Playing = "Playing"
+    const val Unplayed = "Unplayed"
+    const val Played = "Played"
+    const val Planned = "Plan to Play"
+    const val Completed = "Completed"
+    const val Beaten = "Beaten"
+    const val Abandoned = "Abandoned"
+    const val Playing = "Playing"
 }

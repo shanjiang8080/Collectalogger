@@ -16,6 +16,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import java.util.concurrent.CancellationException
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * This handles all API requests to IGDB.
@@ -25,7 +26,7 @@ object IGDBSource {
     private val client = HttpClient(Android)
     private val mutex = Mutex()
     private var lastRequestTime = 0L
-    private const val RATE_LIMIT_DELAY_MS = 300L // Conservative compared to 4 per second
+    private val RATE_LIMIT_DELAY = 300.milliseconds // Conservative compared to 4 per second
 
     /**
      * This method creates an API call to IGDB given an endpoint (e.g: games)
@@ -35,15 +36,15 @@ object IGDBSource {
      */
     suspend fun makeAPICall(
         endpoint: String,
-        request_body: String,
+        requestBody: String,
         ): JSONArray {
         mutex.withLock {
             val now = System.currentTimeMillis()
-            val elapsed = now - lastRequestTime
-            if (elapsed < RATE_LIMIT_DELAY_MS) {
-                delay(RATE_LIMIT_DELAY_MS - elapsed)
+            val elapsed = (now - lastRequestTime).milliseconds
+            if (elapsed < RATE_LIMIT_DELAY) {
+                delay(RATE_LIMIT_DELAY - elapsed)
             }
-            lastRequestTime = System.currentTimeMillis()
+            lastRequestTime = now
 
             val igdbResponse: String
             try {
@@ -54,7 +55,7 @@ object IGDBSource {
                         append(HttpHeaders.ContentType, "text/plain")
                         append(HttpHeaders.Connection, "keep-alive")
                     }
-                    setBody(request_body)
+                    setBody(requestBody)
                 }.bodyAsText()
                 if (igdbResponse[0] != '[') {
                     // continue for other exception types

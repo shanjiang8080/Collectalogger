@@ -13,7 +13,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.example.collectalogger2.R
 import com.example.collectalogger2.data.WishlistGame
-import com.example.collectalogger2.navigation.WishList
 
 @Composable
 fun WishListScreen(

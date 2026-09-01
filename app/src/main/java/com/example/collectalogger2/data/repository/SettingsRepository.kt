@@ -48,7 +48,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     suspend fun getSteamLogin(url: String) {
         val id: String
         try {
-            id = _getSteamID(url)
+            id = getSteamId(url)
             dataStore.edit { it[STEAM_ID] = id }
             saveSteamId(id)
             Log.i("Steam ID saved!", id)
@@ -105,7 +105,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     }
 }
 
-suspend fun _getSteamID(url: String): String {
+suspend fun getSteamId(url: String): String {
     var newUrl = url
     if (newUrl.endsWith("/"))
         newUrl = newUrl.substring(0, newUrl.length - 1)
