@@ -1,3 +1,4 @@
+import com.android.build.api.dsl.ApplicationExtension
 import java.util.Properties
 
 plugins {
@@ -8,18 +9,19 @@ plugins {
     id("com.google.devtools.ksp") version "2.3.6"
 }
 
-android {
+kotlin {
+    jvmToolchain(21)
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+    }
+}
+
+configure<ApplicationExtension> {
     namespace = "com.example.collectalogger2"
     compileSdk = 37
 
-    kotlin {
-        jvmToolchain(21)
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
-        }
-        sourceSets.all {
-            kotlin.srcDir("build/generated/ksp/${name}/kotlin")
-        }
+    sourceSets.all {
+        kotlin.directories += "build/generated/ksp/${name}/kotlin"
     }
 
     defaultConfig {
