@@ -5,10 +5,13 @@ import com.example.collectalogger2.data.Game
 import com.example.collectalogger2.data.GameDao
 import com.example.collectalogger2.data.Genre
 import com.example.collectalogger2.data.GenreDao
+import com.example.collectalogger2.data.ImportIgnoredResult
+import com.example.collectalogger2.data.ImportIgnoredResultDao
 import com.example.collectalogger2.data.datasource.GameEvent
 import com.example.collectalogger2.data.datasource.GenreDataSource
 import com.example.collectalogger2.data.datasource.LocalDataSource
 import com.example.collectalogger2.data.datasource.RemoteLibraryDataSource
+import com.example.collectalogger2.data.datasource.searchIGDB
 import com.example.collectalogger2.data.repository.RepositoryEvent.ShowErrorMessage
 import com.example.collectalogger2.data.repository.RepositoryEvent.ShowInfoMessage
 import com.example.collectalogger2.data.repository.RepositoryEvent.ShowLoadingFinished
@@ -47,10 +50,15 @@ class GameLibraryRepository(
     private val genreDataSource: GenreDataSource,
     private val gameDao: GameDao,
     private val genreDao: GenreDao,
+    private val importIgnoredResultDao: ImportIgnoredResultDao,
 ) {
 
     private var _genreFlow = MutableStateFlow<List<Genre>>(emptyList())
     var genreFlow: StateFlow<List<Genre>> = _genreFlow.asStateFlow()
+
+    // The library games the user chose to ignore; they are excluded from future imports
+    private var _ignoredResults = MutableStateFlow<List<ImportIgnoredResult>>(emptyList())
+    var ignoredResults: StateFlow<List<ImportIgnoredResult>> = _ignoredResults.asStateFlow()
 
     // The load percentage as a float from 0-1, or -1 if not loading
     private var _loadPercentage = MutableStateFlow(-1f)
@@ -59,6 +67,10 @@ class GameLibraryRepository(
     // For event emission
     private var _eventFlow = MutableSharedFlow<RepositoryEvent>()
     var eventFlow = _eventFlow.asSharedFlow()
+
+    // The games that failed to import, grouped by the library they came from
+    private var _missingGames = MutableStateFlow<Map<String, List<Game>>>(emptyMap())
+    var missingGames: StateFlow<Map<String, List<Game>>> = _missingGames.asStateFlow()
 
     init {
         CoroutineScope(Dispatchers.IO).launch {
@@ -70,6 +82,11 @@ class GameLibraryRepository(
                         Log.i("GameLibraryRepository", "Genre inserted: ${genre.name}")
                     }
                 }
+            }
+        }
+        CoroutineScope(Dispatchers.IO).launch {
+            importIgnoredResultDao.getAllIgnoredResultsFlow().collect {
+                _ignoredResults.value = it
             }
         }
     }
@@ -117,6 +134,80 @@ class GameLibraryRepository(
 
     suspend fun updateGame(game: Game) = gameDao.update(game)
 
+    suspend fun insertIgnoredResult(ignoredResult: ImportIgnoredResult) =
+        importIgnoredResultDao.insert(ignoredResult)
+
+    suspend fun deleteIgnoredResult(ignoredResult: ImportIgnoredResult) =
+        importIgnoredResultDao.delete(ignoredResult)
+
+    /**
+     * Searches IGDB for games by name.
+     * Returns partial games, holding only the IGDB metadata, so they can be
+     * matched up with a non-imported game with importNonImportedGame.
+     */
+    suspend fun searchIgdbGames(search: String, limit: Int = 5): List<Game> =
+        searchIGDB(search, limit)
+
+    /**
+     * Imports a non-imported game by creating (or merging into, if an IGDB match
+     * already exists) a full game. The IGDB metadata is taken from igdbGame, and
+     * the store-specific data (store ID, playtime) from missingGame.
+     */
+    suspend fun importNonImportedGame(library: String, missingGame: Game, igdbGame: Game) {
+        // The IGDB result holds no library data, so take the platform from the
+        // missing game, defaulting to PC like the automatic import path
+        val platform = missingGame.platform.ifEmpty { setOf("PC") }
+        val existingGame = gameDao.getGameByIGDBId(igdbGame.igdbId)
+        if (existingGame != null) {
+            var newGame = existingGame.copy(
+                playTime = maxOf(existingGame.playTime, missingGame.playTime),
+                source = existingGame.source.plus(library),
+                platform = existingGame.platform.plus(platform)
+            )
+            newGame = newGame.withStoreIdsFrom(missingGame)
+            if (newGame.status.isEmpty()) {
+                newGame = if (newGame.playTime > 0) {
+                    newGame.copy(status = PlayStatus.Played)
+                } else {
+                    newGame.copy(status = PlayStatus.Unplayed)
+                }
+            }
+            updateGame(newGame)
+            Log.i(
+                "Game merged!",
+                "{title: ${newGame.title}, igdbId: ${newGame.igdbId}, id: ${newGame.id}}"
+            )
+        } else {
+            var newGame = igdbGame.withStoreIdsFrom(missingGame).copy(
+                playTime = missingGame.playTime,
+                platform = platform,
+                source = setOf(library)
+            )
+            newGame = if (newGame.playTime > 0) {
+                newGame.copy(status = PlayStatus.Played)
+            } else {
+                newGame.copy(status = PlayStatus.Unplayed)
+            }
+            insertGame(newGame)
+            Log.i(
+                "Non-imported game imported!",
+                "{title: ${newGame.title}, igdbId: ${newGame.igdbId}}"
+            )
+        }
+    }
+
+    /**
+     * Copies the store-specific IDs of [other] into this game,
+     * for the stores this game has none yet.
+     */
+    private fun Game.withStoreIdsFrom(other: Game): Game = copy(
+        steamId = if (steamId != -1L) steamId else other.steamId,
+        epicId = if (epicId.isNotEmpty()) epicId else other.epicId,
+        gogId = if (gogId.isNotEmpty()) gogId else other.gogId,
+        itchId = if (itchId.isNotEmpty()) itchId else other.itchId,
+        amazonId = if (amazonId.isNotEmpty()) amazonId else other.amazonId,
+    )
+
     fun getGamesBySearchTerm(search: String, limit: Int = 0): List<Game> =
         if (limit != 0)
             gameDao.getGamesSearchLimited(search, limit)
@@ -126,6 +217,7 @@ class GameLibraryRepository(
     suspend fun updateGameLibraries() {
         var newGames = 0
         val missingGamesMap = mutableMapOf<String, List<Game>>()
+        _missingGames.value = emptyMap()
         Log.d("GameLibraryRepository", "Library data sources: $remoteLibraryDataSources")
         for (dataSource in remoteLibraryDataSources) {
             Log.d("GameLibraryRepository", "Starting import of ${dataSource.libraryName}")
@@ -211,7 +303,24 @@ class GameLibraryRepository(
                                     _loadPercentage.value = 1f
                                 }
                                 is GameEvent.ListNonImportedGames -> {
-                                    missingGamesMap[dataSource.libraryName] = gameEvent.games
+                                    // Filter out results the user chose to ignore,
+                                    // so they won't be reported (or imported) in the future
+                                    val seenTitles = mutableSetOf<String>()
+                                    val reportedGames = gameEvent.games.filterNot { game ->
+                                        _ignoredResults.value.any { ignored ->
+                                            ignored.library == dataSource.libraryName &&
+                                                    ignored.name.equals(game.title, ignoreCase = true)
+                                        }
+                                    }.filter { game ->
+                                        // Combine duplicates (e.g. multiple entitlements of the
+                                        // same game on Amazon), so they are only listed once
+                                        val title = game.title.trim()
+                                        title.isEmpty() || seenTitles.add(title.lowercase())
+                                    }
+                                    if (reportedGames.isNotEmpty()) {
+                                        missingGamesMap[dataSource.libraryName] = reportedGames
+                                        _missingGames.value = missingGamesMap.toMap()
+                                    }
                                 }
 
                                 GameEvent.IncrementGamesCount -> {

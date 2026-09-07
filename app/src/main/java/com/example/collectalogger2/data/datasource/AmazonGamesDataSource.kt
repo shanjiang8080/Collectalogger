@@ -91,6 +91,24 @@ class AmazonGamesDataSource(
         // Also remove the ASINs that point to skipped games
         asinMap = asinMap.filter { it.value.second in idTitleMap }.toMutableMap()
 
+        // Amazon can have multiple entitlements for the same game. When one of
+        // them has been imported, match the leftover ones to the database game
+        // by title, so they don't show up as non-imported forever.
+        if (!forceUpdate) {
+            val gamesByTitle = gameDao.getAllGames().associateBy { it.title.lowercase() }
+            for ((amazonId, title) in idTitleMap.toList()) {
+                val existingGame = gamesByTitle[title.lowercase()] ?: continue
+                val modifiedGame = existingGame.copy(
+                    platform = existingGame.platform.plus("PC"),
+                    // only bind this entitlement if the database game has no Amazon id yet
+                    amazonId = if (existingGame.amazonId == "") amazonId else existingGame.amazonId
+                )
+                if (modifiedGame != existingGame)
+                    emit(GameLoaded(modifiedGame))
+                idTitleMap.remove(amazonId)
+            }
+        }
+
         val duplicateSet = mutableSetOf<Long>() // Contains game ids for duplicate handling
 
         // Primary pass: match games by their ASIN through IGDB's external_games,

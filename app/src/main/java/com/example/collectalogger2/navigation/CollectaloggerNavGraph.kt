@@ -24,6 +24,9 @@ import com.example.collectalogger2.ui.detail.DetailViewModelFactory
 import com.example.collectalogger2.ui.gallery.GalleryScreen
 import com.example.collectalogger2.ui.gallery.GalleryViewModel
 import com.example.collectalogger2.ui.gallery.GalleryViewModelFactory
+import com.example.collectalogger2.ui.nonimported.NonImportedScreen
+import com.example.collectalogger2.ui.nonimported.NonImportedViewModel
+import com.example.collectalogger2.ui.nonimported.NonImportedViewModelFactory
 import com.example.collectalogger2.ui.settings.SettingsScreen
 import com.example.collectalogger2.ui.settings.SettingsViewModel
 import com.example.collectalogger2.ui.settings.SettingsViewModelFactory
@@ -39,6 +42,8 @@ import kotlinx.serialization.Serializable
 object WishList
 @Serializable
 object Settings
+@Serializable
+object NonImported
 
 // Route for nested
 @Serializable
@@ -106,7 +111,23 @@ fun CollectaloggerNavGraph(
                         viewModel(backStackEntry, factory = factory)
                     GalleryScreen(
                         viewModel = galleryViewModel,
-                        onNavigateToDetail = { id -> navController.navigate(route = DetailView(id)) }
+                        onNavigateToDetail = { id -> navController.navigate(route = DetailView(id)) },
+                        onReviewNonImported = {
+                            navController.navigate(route = NonImported) {
+                                launchSingleTop = true
+                            }
+                        }
+                    )
+                }
+                composable<NonImported> { backStackEntry ->
+                    val factory = remember {
+                        NonImportedViewModelFactory(appContainer)
+                    }
+                    val nonImportedViewModel: NonImportedViewModel =
+                        viewModel(backStackEntry, factory = factory)
+                    NonImportedScreen(
+                        viewModel = nonImportedViewModel,
+                        onNavigateBack = { navController.popBackStack() }
                     )
                 }
                 composable<WishList> { backStackEntry ->

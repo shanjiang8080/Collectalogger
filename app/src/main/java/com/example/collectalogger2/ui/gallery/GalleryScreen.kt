@@ -92,7 +92,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.collectalogger2.R
 import com.example.collectalogger2.data.Game
 import com.example.collectalogger2.data.Genre
-import com.example.collectalogger2.ui.gallery.DialogActionType.CheckNonImportedItems
 import com.example.collectalogger2.ui.overlays.AmazonOverlay
 import com.example.collectalogger2.ui.overlays.EpicOverlay
 import com.example.collectalogger2.ui.overlays.SteamOverlay
@@ -109,6 +108,7 @@ import kotlinx.coroutines.launch
 fun GalleryScreen(
     viewModel: GalleryViewModel,
     onNavigateToDetail: (id: Long) -> Unit,
+    onReviewNonImported: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val textFieldState = rememberTextFieldState(initialText = "")
@@ -140,6 +140,7 @@ fun GalleryScreen(
         allGenres = allGenres,
         onUpdateFilter = { viewModel.updateFilter(it) },
         onNavigateToDetail = onNavigateToDetail,
+        onReviewNonImported = onReviewNonImported,
         getSearchedGamesList = { viewModel.getSearchedGamesList(it) },
         onSearch = {
             Log.d(
@@ -167,6 +168,7 @@ fun GalleryScreenBody(
     uiState: GalleryUiState,
     onUpdateFilter: (Filter) -> Unit,
     onNavigateToDetail: (Long) -> Unit,
+    onReviewNonImported: () -> Unit,
     getSearchedGamesList: (String) -> List<Game>,
     onSearch: (String) -> Unit,
     allGenres: List<Genre>,
@@ -226,9 +228,7 @@ fun GalleryScreenBody(
                             actionLabel = "Review"
                             withDismissAction = true
                             duration = SnackbarDuration.Indefinite
-                            performedAction = {
-                                dialogState = CheckNonImportedItems(event.actionType.items)
-                            }
+                            performedAction = onReviewNonImported
                         }
                     }
 
@@ -253,15 +253,6 @@ fun GalleryScreenBody(
 
     if (dialogState != null) {
         when (dialogState!!) {
-            is CheckNonImportedItems -> {
-                // Nothing for now
-                // TODO create a composable to try to import them or ignore them
-                (dialogState as CheckNonImportedItems).items.forEach { failedImports ->
-                    failedImports.value.forEach {
-                        Log.i("GalleryScreen", "Not imported: ${it.title}")
-                    }
-                }
-            }
             is DialogActionType.LoggedOut -> {
                 // onDismiss is the same always, so define it here
                 val onDismiss = { dialogState = null }
@@ -284,7 +275,7 @@ fun GalleryScreenBody(
 
     Scaffold(
         topBar = {
-            if (isSelectionMode) { // TODO have an else with AppBarWithSearch
+            if (isSelectionMode) {
                 TopAppBar(
                     title = {
                         Text("${uiState.selectedIds.size} selected")
@@ -761,6 +752,7 @@ private fun GalleryPreview() {
         uiState = uiState,
         onUpdateFilter = {},
         onNavigateToDetail = {},
+        onReviewNonImported = {},
         getSearchedGamesList = { return@GalleryScreenBody listOf() },
         onSearch = {},
         allGenres = listOf(),

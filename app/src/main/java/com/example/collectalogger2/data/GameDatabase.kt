@@ -9,14 +9,15 @@ import com.example.collectalogger2.util.Converters
 
 // Increase the version whenever you change the schema of the database table
 @Database(
-    entities = [Game::class, Genre::class],
-    version = 5,
+    entities = [Game::class, Genre::class, ImportIgnoredResult::class],
+    version = 6,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
 abstract class GameDatabase : RoomDatabase() {
     abstract fun gameDao(): GameDao
     abstract fun genreDao(): GenreDao
+    abstract fun importIgnoredResultDao(): ImportIgnoredResultDao
 
     companion object {
         @Volatile

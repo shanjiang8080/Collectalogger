@@ -45,7 +45,6 @@ sealed class SnackbarActionType {
 
 sealed class DialogActionType {
     data class LoggedOut(val library: String) : DialogActionType()
-    data class CheckNonImportedItems(val items: Map<String, List<Game>>) : DialogActionType()
 }
 
 // snackbars for informational/low priority stuff like retrying, errors, etc

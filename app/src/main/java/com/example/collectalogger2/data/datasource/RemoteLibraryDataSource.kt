@@ -51,19 +51,6 @@ abstract class RemoteLibraryDataSource(val gameDao: GameDao) {
     abstract fun copyWithID(game: Game, gameWithId: Game): Game
 
     /**
-     * This method takes in a String and returns the String without
-     * "The", "An", or "A" at the beginning, if there is one.
-     */
-    internal fun getSortingName(name: String): String {
-        val nameWords = name.split(" ")
-        // don't get rid of the whole thing!
-        if (nameWords.size <= 1) return name
-        if (nameWords[0].lowercase() in setOf("a", "an", "the"))
-            return nameWords.drop(1).joinToString(" ")
-        return name
-    }
-
-    /**
      * This method makes the central call to IGDB, given a list of identifiers.
      * This gets APIs 500 games at a time, though `games` can be unlimited in length.
      * Returns updated games.
@@ -222,6 +209,19 @@ abstract class RemoteLibraryDataSource(val gameDao: GameDao) {
      * This abstract method copies the game passed in and modifies it to pass in the localId.
      */
     internal abstract fun addToSourceLibrary(game: Game, localId: String): Game
+}
+
+/**
+ * This method takes in a String and returns the String without
+ * "The", "An", or "A" at the beginning, if there is one.
+ */
+internal fun getSortingName(name: String): String {
+    val nameWords = name.split(" ")
+    // don't get rid of the whole thing!
+    if (nameWords.size <= 1) return name
+    if (nameWords[0].lowercase() in setOf("a", "an", "the"))
+        return nameWords.drop(1).joinToString(" ")
+    return name
 }
 
 /**

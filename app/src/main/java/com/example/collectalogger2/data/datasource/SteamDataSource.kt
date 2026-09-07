@@ -38,6 +38,9 @@ class SteamDataSource(var userIdFlow: Flow<String>, gameDao: GameDao) : RemoteLi
             mapOf(
                 "steamid" to userId,
                 "include_played_free_games" to "true",
+                // include_appinfo makes the response list the app names,
+                // used for the non-imported games
+                "include_appinfo" to "true",
                 "skip_unvetted_apps" to "false"
             )
         )
@@ -48,6 +51,9 @@ class SteamDataSource(var userIdFlow: Flow<String>, gameDao: GameDao) : RemoteLi
         emit(ExpectedGamesCount(games.length()))
         // this has many games, with URL as key and playtime as long
         val steamIdMap = mutableMapOf<String, Pair<Long, String>>()
+        // The app names as Steam reports them, with the app ID as key.
+        // Only used for the non-imported games; imported games rely on IGDB.
+        val steamNameMap = mutableMapOf<String, String>()
         for (i in 0 until games.length()) {
             val apiGame = games.getJSONObject(i)
 
@@ -66,6 +72,7 @@ class SteamDataSource(var userIdFlow: Flow<String>, gameDao: GameDao) : RemoteLi
                 continue
             }
             steamIdMap["$steamAppID"] = newPlayTime to "$steamAppID"
+            if (apiGame.has("name")) steamNameMap["$steamAppID"] = apiGame.getString("name")
         }
         callIGDB(
             gameIdentifiers = steamIdMap,
@@ -90,10 +97,11 @@ class SteamDataSource(var userIdFlow: Flow<String>, gameDao: GameDao) : RemoteLi
         val missingGames = mutableListOf<Game>()
         steamIdMap.forEach { game ->
             missingGames.add(
-                // TODO there should be the game's title so it can be identified
                 Game(
                     steamId = game.key.toLong(),
-                    playTime = game.value.first
+                    playTime = game.value.first,
+                    // the name according to Steam, for identifying the game
+                    title = steamNameMap[game.key] ?: ""
                 )
             )
         }

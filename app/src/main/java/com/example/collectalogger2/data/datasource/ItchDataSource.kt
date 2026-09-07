@@ -40,8 +40,18 @@ class ItchDataSource(var secretFlow: Flow<String>, gameDao: GameDao) :
                 val jsonItem = ownedKeys.getJSONObject(i)
                 val jsonGame = jsonItem.getJSONObject("game")
                 if (jsonGame.getString("classification") != "game") continue
-                itchIdMap[jsonGame.getString("url")] = 0L to "${jsonGame.getInt("id")}"
-                idNameMap["${jsonGame.getInt("id")}"] = jsonGame.getString("title")
+                val itchId = "${jsonGame.getInt("id")}"
+                // Quick check: if the Itch version of the game exists in the database already, skip
+                // (for example when the game was imported with Search IGDB)
+                val itchGame = gameDao.getGameByItchId(itchId)
+                if (!forceUpdate && itchGame != null) {
+                    val modifiedItchGame = itchGame.copy(platform = itchGame.platform.plus("PC"))
+                    if (modifiedItchGame != itchGame)
+                        emit(GameLoaded(modifiedItchGame))
+                    continue
+                }
+                itchIdMap[jsonGame.getString("url")] = 0L to itchId
+                idNameMap[itchId] = jsonGame.getString("title")
             }
         } while (jsonObject.has("owned_keys") && jsonObject.getJSONArray("owned_keys")
                 .length() != 0

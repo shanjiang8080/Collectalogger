@@ -38,6 +38,7 @@ class AppDataContainer(private val context: Context) : AppContainer {
     override val gameLibraryRepository: GameLibraryRepository by lazy {
         val gameDao = GameDatabase.getDatabase(context).gameDao()
         val genreDao = GameDatabase.getDatabase(context).genreDao()
+        val importIgnoredResultDao = GameDatabase.getDatabase(context).importIgnoredResultDao()
 
         GameLibraryRepository(
             remoteLibraryDataSources = emptyList<RemoteLibraryDataSource>()
@@ -78,7 +79,8 @@ class AppDataContainer(private val context: Context) : AppContainer {
             localDataSource = LocalDataSource(),
             genreDataSource = GenreDataSource(),
             gameDao = gameDao,
-            genreDao = genreDao
+            genreDao = genreDao,
+            importIgnoredResultDao = importIgnoredResultDao
         )
     }
 }
