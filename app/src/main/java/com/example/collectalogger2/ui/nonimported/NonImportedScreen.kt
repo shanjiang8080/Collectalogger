@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,8 +16,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -82,18 +86,12 @@ fun NonImportedScreen(
                 // Action buttons, sticking to the top of the list while scrolling
                 stickyHeader(key = "actions") {
                     Surface(color = MaterialTheme.colorScheme.background) {
-                        Row(
+                        FlowRow(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Button(
-                                onClick = { viewModel.ignoreSelected() },
-                                enabled = uiState.selectedKeys.isNotEmpty()
-                            ) {
-                                Text("Ignore")
-                            }
                             Button(
                                 onClick = { viewModel.openSearchDialog() },
                                 enabled = uiState.selectedKeys.isNotEmpty()
@@ -104,6 +102,30 @@ fun NonImportedScreen(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text("Search IGDB")
+                            }
+                            Button(
+                                onClick = { viewModel.importSelectedWithoutIgdb() },
+                                enabled = uiState.selectedKeys.isNotEmpty(),
+                                colors = ButtonDefaults.filledTonalButtonColors()
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = null
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Import Manually")
+                            }
+                            Button(
+                                onClick = { viewModel.ignoreSelected() },
+                                enabled = uiState.selectedKeys.isNotEmpty(),
+                                colors = ButtonDefaults.filledTonalButtonColors()
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = null
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Ignore")
                             }
                         }
                     }
@@ -144,6 +166,7 @@ fun NonImportedScreen(
         SearchIgdbDialog(
             uiState = uiState,
             onChooseResult = { key, igdbGame -> viewModel.chooseIgdbResult(key, igdbGame) },
+            onSearchCustomTerm = { key, searchTerm -> viewModel.searchWithCustomTerm(key, searchTerm) },
             onConfirm = { viewModel.confirmSearchDialog() },
             onDismiss = { viewModel.dismissSearchDialog() }
         )

@@ -25,7 +25,9 @@ data class NonImportedUiState(
     // Partial IGDB games per selection key; an entry is absent while its search is running
     val searchResults: Map<String, List<Game>> = emptyMap(),
     // The IGDB game chosen for each selection key
-    val chosenResults: Map<String, Game> = emptyMap()
+    val chosenResults: Map<String, Game> = emptyMap(),
+    // The custom search term used for each selection key, if any
+    val customSearchTerms: Map<String, String> = emptyMap()
 )
 
 // Keys are "<library name>:<game title>", disambiguated by the game's
@@ -123,23 +125,61 @@ class NonImportedViewModel(
         val selectedGames = getSelectedGames()
         if (selectedGames.isEmpty()) return
         _uiState.update {
-            it.copy(showSearchDialog = true, searchResults = emptyMap(), chosenResults = emptyMap())
+            it.copy(
+                showSearchDialog = true,
+                searchResults = emptyMap(),
+                chosenResults = emptyMap(),
+                customSearchTerms = emptyMap()
+            )
         }
         selectedGames.forEach { (library, game) ->
-            viewModelScope.launch {
-                val results = try {
-                    gameLibraryRepository.searchIgdbGames(game.title)
-                } catch (e: Exception) {
-                    Log.w(
-                        "NonImportedViewModel",
-                        "IGDB search failed for \"${game.title}\": ${e.message}"
-                    )
-                    emptyList()
-                }
-                _uiState.update {
-                    it.copy(searchResults = it.searchResults + (selectionKey(library, game) to results))
-                }
+            searchForKey(selectionKey(library, game), game.title)
+        }
+    }
+
+    // Runs an IGDB search for one selected game and stores its results under its key
+    private fun searchForKey(key: String, searchTerm: String) {
+        // Remove the previous results first, marking the search as running
+        _uiState.update { it.copy(searchResults = it.searchResults - key) }
+        viewModelScope.launch {
+            val results = try {
+                gameLibraryRepository.searchIgdbGames(searchTerm)
+            } catch (e: Exception) {
+                Log.w(
+                    "NonImportedViewModel",
+                    "IGDB search failed for \"$searchTerm\": ${e.message}"
+                )
+                emptyList()
             }
+            _uiState.update {
+                it.copy(searchResults = it.searchResults + (key to results))
+            }
+        }
+    }
+
+    // Re-searches IGDB for one selected game with a custom search term,
+    // replacing the previous results for that game
+    fun searchWithCustomTerm(key: String, searchTerm: String) {
+        if (searchTerm.isBlank()) return
+        // Remember the term so the dropdown can show what was searched for
+        _uiState.update {
+            it.copy(customSearchTerms = it.customSearchTerms + (key to searchTerm))
+        }
+        searchForKey(key, searchTerm)
+    }
+
+    // Imports the selected games without binding them to IGDB games;
+    // they disappear from the screen through the resolved results filter.
+    // Runs on IO, since the repository does blocking database queries
+    fun importSelectedWithoutIgdb() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val importedKeys = mutableSetOf<String>()
+            getSelectedGames().forEach { (library, game) ->
+                gameLibraryRepository.importNonImportedGameWithoutIgdb(library, game)
+                importedKeys.add(selectionKey(library, game))
+            }
+            _resolvedKeys.update { it + importedKeys }
+            _uiState.update { it.copy(selectedKeys = emptySet()) }
         }
     }
 
@@ -149,7 +189,12 @@ class NonImportedViewModel(
 
     fun dismissSearchDialog() {
         _uiState.update {
-            it.copy(showSearchDialog = false, searchResults = emptyMap(), chosenResults = emptyMap())
+            it.copy(
+                showSearchDialog = false,
+                searchResults = emptyMap(),
+                chosenResults = emptyMap(),
+                customSearchTerms = emptyMap()
+            )
         }
     }
 

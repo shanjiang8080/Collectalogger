@@ -197,15 +197,63 @@ class GameLibraryRepository(
     }
 
     /**
+     * Imports a non-imported game without binding it to an IGDB game, importing
+     * only the store-specific data (store ID, playtime). If a game without IGDB
+     * data (igdbId = -1) with the same title already exists, it is merged into
+     * instead of creating a duplicate.
+     */
+    suspend fun importNonImportedGameWithoutIgdb(library: String, missingGame: Game) {
+        val platform = missingGame.platform.ifEmpty { setOf("PC") }
+        val existingGame = gameDao.getGameByTitleWithoutIgdb(missingGame.title)
+        if (existingGame != null) {
+            var newGame = existingGame.copy(
+                playTime = maxOf(existingGame.playTime, missingGame.playTime),
+                source = existingGame.source.plus(library),
+                platform = existingGame.platform.plus(platform)
+            )
+            newGame = newGame.withStoreIdsFrom(missingGame)
+            if (newGame.status.isEmpty()) {
+                newGame = if (newGame.playTime > 0) {
+                    newGame.copy(status = PlayStatus.Played)
+                } else {
+                    newGame.copy(status = PlayStatus.Unplayed)
+                }
+            }
+            updateGame(newGame)
+            Log.i(
+                "Game merged!",
+                "{title: ${newGame.title}, igdbId: ${newGame.igdbId}, id: ${newGame.id}}"
+            )
+        } else {
+            var newGame = missingGame.copy(
+                igdbId = -1,
+                playTime = missingGame.playTime,
+                platform = platform,
+                source = setOf(library)
+            )
+            newGame = if (newGame.playTime > 0) {
+                newGame.copy(status = PlayStatus.Played)
+            } else {
+                newGame.copy(status = PlayStatus.Unplayed)
+            }
+            insertGame(newGame)
+            Log.i(
+                "Non-imported game imported without IGDB!",
+                "{title: ${newGame.title}, id: ${newGame.id}}"
+            )
+        }
+    }
+
+    /**
      * Copies the store-specific IDs of [other] into this game,
      * for the stores this game has none yet.
      */
     private fun Game.withStoreIdsFrom(other: Game): Game = copy(
         steamId = if (steamId != -1L) steamId else other.steamId,
-        epicId = if (epicId.isNotEmpty()) epicId else other.epicId,
-        gogId = if (gogId.isNotEmpty()) gogId else other.gogId,
-        itchId = if (itchId.isNotEmpty()) itchId else other.itchId,
-        amazonId = if (amazonId.isNotEmpty()) amazonId else other.amazonId,
+        epicId = epicId.ifEmpty { other.epicId },
+        gogId = gogId.ifEmpty { other.gogId },
+        itchId = itchId.ifEmpty { other.itchId },
+        amazonId = amazonId.ifEmpty { other.amazonId },
     )
 
     fun getGamesBySearchTerm(search: String, limit: Int = 0): List<Game> =

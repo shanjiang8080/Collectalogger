@@ -158,6 +158,23 @@ class NonImportedViewModelTest {
         assertTrue(state.gamesByLibrary.isEmpty())
     }
 
+    @Test
+    fun `importSelectedWithoutIgdb imports selected games without IGDB binding`() = runTest {
+        val game = Game(title = "Weird Game", playTime = 10, steamId = 123)
+        missingGamesStream.value = mapOf("Steam" to listOf(game))
+
+        viewModel.toggleSelection(selectionKey("Steam", game))
+        viewModel.importSelectedWithoutIgdb()
+
+        coVerify(timeout = 5000) {
+            mockGameRepository.importNonImportedGameWithoutIgdb("Steam", game)
+        }
+        waitFor(timeout = 5000) { viewModel.uiState.value.gamesByLibrary.isEmpty() }
+        val state = viewModel.uiState.value
+        assertTrue(state.selectedKeys.isEmpty())
+        assertTrue(state.gamesByLibrary.isEmpty())
+    }
+
     // Busy-waits for a condition, for flows that update from Dispatchers.IO
     private fun waitFor(timeout: Long, condition: () -> Boolean) {
         val startTime = System.currentTimeMillis()
