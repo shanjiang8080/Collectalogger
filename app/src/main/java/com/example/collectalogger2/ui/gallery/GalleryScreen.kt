@@ -1,6 +1,7 @@
 package com.example.collectalogger2.ui.gallery
 
 import android.annotation.SuppressLint
+import android.graphics.fonts.FontStyle
 import android.util.Log
 import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.EaseOutBack
@@ -66,6 +67,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -85,6 +87,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -98,6 +101,7 @@ import com.example.collectalogger2.ui.overlays.SteamOverlay
 import com.example.collectalogger2.ui.shared.CoverArt
 import com.example.collectalogger2.util.Filter
 import com.example.collectalogger2.util.LocalNavEventBus
+import com.example.collectalogger2.util.PlayStatus
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
@@ -187,6 +191,13 @@ fun GalleryScreenBody(
     var sortMenuBoxState by remember { mutableStateOf(false) }
     var genreMenuBoxState by remember { mutableStateOf(false) }
     var selectedGenreState by remember { mutableStateOf<Genre?>(null) }
+    var sourceMenuBoxState by remember { mutableStateOf(false) }
+    var platformMenuBoxState by remember { mutableStateOf(false) }
+    var playStatusMenuBoxState by remember { mutableStateOf(false) }
+    // add more when more filters get added
+    val hasFiltersApplied = favoritesChecked || uiState.filter?.genre != null ||
+            uiState.filter?.library != null || uiState.filter?.platform != null ||
+            uiState.filter?.playStatus != null
     val snackbarHostState = remember { SnackbarHostState() }
 
     // UI states
@@ -303,8 +314,7 @@ fun GalleryScreenBody(
                     getSearchedGamesList = getSearchedGamesList,
                     onNavigateToDetail = onNavigateToDetail,
                     onClickFilterButton = { showFilterSheet = true },
-                    // add more when more filters get added
-                    hasFiltersApplied = favoritesChecked,
+                    hasFiltersApplied = hasFiltersApplied,
                     searchBarState = searchBarState,
                     scrollBehavior = searchScrollBehavior
                 )
@@ -362,7 +372,7 @@ fun GalleryScreenBody(
                 onDismissRequest = { showFilterSheet = false }
             ) {
                 Column {
-                    // have a row for sorts...
+                    // filters subheading (genre selector below is also a filter)
                     Row(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
@@ -371,17 +381,31 @@ fun GalleryScreenBody(
                             .fillMaxWidth()
                     ) {
                         Text(
-                            text = "Sort by",
+                            text = "Filters",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
                         )
-                        ExposedDropdownMenuBox(
-                            expanded = sortMenuBoxState,
-                            onExpandedChange = { sortMenuBoxState = it },
-                            modifier = Modifier,
+                        TextButton(
+                            onClick = {
+                                favoritesChecked = false
+                                selectedGenreState = null
+                                onUpdateFilter(
+                                    Filter(
+                                        library = null,
+                                        platform = null,
+                                        genre = null,
+                                        developer = null,
+                                        publisher = null,
+                                        isFavorite = null,
+                                        playStatus = null
+                                    )
+                                )
+                            },
+                            enabled = hasFiltersApplied
                         ) {
-                            // nothing yet TODO implement sort by
+                            Text("Reset Filters")
                         }
                     }
-
                     // have a row for filters by favorites
                     Row(
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -401,7 +425,7 @@ fun GalleryScreenBody(
                             }
                         )
                     }
-                    // have a row for filters by genre
+                    // have a row for filters by genre, with sort-by next to it
                     Row(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
@@ -409,29 +433,29 @@ fun GalleryScreenBody(
                             .padding(16.dp)
                             .fillMaxWidth()
                     ) {
-                        Text(
-                            text = "Sort by",
-                        )
                         ExposedDropdownMenuBox(
                             expanded = genreMenuBoxState,
                             onExpandedChange = { genreMenuBoxState = !genreMenuBoxState },
-                        ) {
-                            TextField(
-                                readOnly = true,
-                                value = selectedGenreState?.name ?: "Select genre",
-                                onValueChange = { },
-                                label = { Text("Genre") },
-                                trailingIcon = {
-                                    ExposedDropdownMenuDefaults.TrailingIcon(
-                                        expanded = genreMenuBoxState
-                                    )
-                                },
-                                colors = ExposedDropdownMenuDefaults.textFieldColors(),
-                                modifier = Modifier.menuAnchor(
-                                    ExposedDropdownMenuAnchorType.PrimaryNotEditable,
-                                    true
+                            modifier = Modifier.weight(1f)
+                            ) {
+                                TextField(
+                                    readOnly = true,
+                                    value = selectedGenreState?.name ?: "Select genre",
+                                    onValueChange = { },
+                                    label = { Text("Genre") },
+                                    trailingIcon = {
+                                        ExposedDropdownMenuDefaults.TrailingIcon(
+                                            expanded = genreMenuBoxState
+                                        )
+                                    },
+                                    colors = ExposedDropdownMenuDefaults.textFieldColors(),
+                                    modifier = Modifier
+                                        .menuAnchor(
+                                            ExposedDropdownMenuAnchorType.PrimaryNotEditable,
+                                            true
+                                        )
+                                        .fillMaxWidth()
                                 )
-                            )
                             ExposedDropdownMenu(
                                 expanded = genreMenuBoxState,
                                 onDismissRequest = { genreMenuBoxState = false },
@@ -476,7 +500,199 @@ fun GalleryScreenBody(
                         }
                     }
 
-                    // have a row for filters by library
+                    // have a row for filters by source (library)
+                    val allSources = uiState.games.flatMap { it.source }.distinct().sorted()
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth()
+                    ) {
+                        ExposedDropdownMenuBox(
+                            expanded = sourceMenuBoxState,
+                            onExpandedChange = { sourceMenuBoxState = !sourceMenuBoxState },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            val selectedSource = uiState.filter?.library?.firstOrNull()
+                            TextField(
+                                readOnly = true,
+                                value = selectedSource ?: "All sources",
+                                onValueChange = { },
+                                label = { Text("Source") },
+                                trailingIcon = {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(
+                                        expanded = sourceMenuBoxState
+                                    )
+                                },
+                                colors = ExposedDropdownMenuDefaults.textFieldColors(),
+                                modifier = Modifier
+                                    .menuAnchor(
+                                        ExposedDropdownMenuAnchorType.PrimaryNotEditable,
+                                        true
+                                    )
+                                    .fillMaxWidth()
+                            )
+                            ExposedDropdownMenu(
+                                expanded = sourceMenuBoxState,
+                                onDismissRequest = { sourceMenuBoxState = false },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("All sources") },
+                                    onClick = {
+                                        sourceMenuBoxState = false
+                                        onUpdateFilter(uiState.filter!!.copy(library = null))
+                                    }
+                                )
+                                allSources.forEach { source ->
+                                    DropdownMenuItem(
+                                        text = { Text(source) },
+                                        onClick = {
+                                            sourceMenuBoxState = false
+                                            onUpdateFilter(
+                                                uiState.filter!!.copy(
+                                                    library = listOf(source)
+                                                )
+                                            )
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // have a row for filters by platform
+                    val allPlatforms = uiState.games.flatMap { it.platform }.distinct().sorted()
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth()
+                    ) {
+                        ExposedDropdownMenuBox(
+                            expanded = platformMenuBoxState,
+                            onExpandedChange = { platformMenuBoxState = !platformMenuBoxState },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            val selectedPlatform = uiState.filter?.platform?.firstOrNull()
+                            TextField(
+                                readOnly = true,
+                                value = selectedPlatform ?: "All platforms",
+                                onValueChange = { },
+                                label = { Text("Platform") },
+                                trailingIcon = {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(
+                                        expanded = platformMenuBoxState
+                                    )
+                                },
+                                colors = ExposedDropdownMenuDefaults.textFieldColors(),
+                                modifier = Modifier
+                                    .menuAnchor(
+                                        ExposedDropdownMenuAnchorType.PrimaryNotEditable,
+                                        true
+                                    )
+                                    .fillMaxWidth()
+                            )
+                            ExposedDropdownMenu(
+                                expanded = platformMenuBoxState,
+                                onDismissRequest = { platformMenuBoxState = false },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("All platforms") },
+                                    onClick = {
+                                        platformMenuBoxState = false
+                                        onUpdateFilter(uiState.filter!!.copy(platform = null))
+                                    }
+                                )
+                                allPlatforms.forEach { platform ->
+                                    DropdownMenuItem(
+                                        text = { Text(platform) },
+                                        onClick = {
+                                            platformMenuBoxState = false
+                                            onUpdateFilter(
+                                                uiState.filter!!.copy(
+                                                    platform = listOf(platform)
+                                                )
+                                            )
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // have a row for filters by play status
+                    val allPlayStatuses = listOf(
+                        PlayStatus.Unplayed,
+                        PlayStatus.Playing,
+                        PlayStatus.Played,
+                        PlayStatus.Planned,
+                        PlayStatus.Completed,
+                        PlayStatus.Beaten,
+                        PlayStatus.Abandoned
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth()
+                    ) {
+                        ExposedDropdownMenuBox(
+                            expanded = playStatusMenuBoxState,
+                            onExpandedChange = { playStatusMenuBoxState = !playStatusMenuBoxState },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            val selectedPlayStatus = uiState.filter?.playStatus
+                            TextField(
+                                readOnly = true,
+                                value = selectedPlayStatus ?: "All play statuses",
+                                onValueChange = { },
+                                label = { Text("Play status") },
+                                trailingIcon = {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(
+                                        expanded = playStatusMenuBoxState
+                                    )
+                                },
+                                colors = ExposedDropdownMenuDefaults.textFieldColors(),
+                                modifier = Modifier
+                                    .menuAnchor(
+                                        ExposedDropdownMenuAnchorType.PrimaryNotEditable,
+                                        true
+                                    )
+                                    .fillMaxWidth()
+                            )
+                            ExposedDropdownMenu(
+                                expanded = playStatusMenuBoxState,
+                                onDismissRequest = { playStatusMenuBoxState = false },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("All play statuses") },
+                                    onClick = {
+                                        playStatusMenuBoxState = false
+                                        onUpdateFilter(uiState.filter!!.copy(playStatus = null))
+                                    }
+                                )
+                                allPlayStatuses.forEach { status ->
+                                    DropdownMenuItem(
+                                        text = { Text(status) },
+                                        onClick = {
+                                            playStatusMenuBoxState = false
+                                            onUpdateFilter(
+                                                uiState.filter!!.copy(
+                                                    playStatus = status
+                                                )
+                                            )
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

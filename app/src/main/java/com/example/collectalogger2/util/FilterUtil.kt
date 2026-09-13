@@ -8,12 +8,16 @@ data class Filter(
     val genre: List<Int>? = listOf(),
     val developer: List<String>? = listOf(),
     val publisher: List<String>? = listOf(),
-    val isFavorite: Boolean? = null
+    val isFavorite: Boolean? = null,
+    val playStatus: String? = null
 ) {
     fun getFilteredItems(games: List<Game>): List<Game> {
         return games.filter { game: Game ->
             if (isFavorite != null) {
                 if (isFavorite != game.isFavorite) return@filter false
+            }
+            if (playStatus != null) {
+                if (playStatus != game.status) return@filter false
             }
             if (library != null) {
                 if (library.intersect(game.source).isEmpty()) return@filter false
