@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -40,6 +41,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenuItem
@@ -49,6 +52,7 @@ import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -84,6 +88,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -102,6 +107,8 @@ import com.example.collectalogger2.ui.shared.CoverArt
 import com.example.collectalogger2.util.Filter
 import com.example.collectalogger2.util.LocalNavEventBus
 import com.example.collectalogger2.util.PlayStatus
+import com.example.collectalogger2.util.Sort
+import com.example.collectalogger2.util.SortBy
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
@@ -143,6 +150,7 @@ fun GalleryScreen(
         uiState = uiState,
         allGenres = allGenres,
         onUpdateFilter = { viewModel.updateFilter(it) },
+        onUpdateSort = { viewModel.updateSort(it) },
         onNavigateToDetail = onNavigateToDetail,
         onReviewNonImported = onReviewNonImported,
         getSearchedGamesList = { viewModel.getSearchedGamesList(it) },
@@ -171,6 +179,7 @@ fun GalleryScreenBody(
     textFieldState: TextFieldState,
     uiState: GalleryUiState,
     onUpdateFilter: (Filter) -> Unit,
+    onUpdateSort: (Sort) -> Unit,
     onNavigateToDetail: (Long) -> Unit,
     onReviewNonImported: () -> Unit,
     getSearchedGamesList: (String) -> List<Game>,
@@ -189,6 +198,8 @@ fun GalleryScreenBody(
 
     var favoritesChecked by remember { mutableStateOf(uiState.filter?.isFavorite == true) }
     var sortMenuBoxState by remember { mutableStateOf(false) }
+    var sortAscending by remember { mutableStateOf(uiState.sort?.ascending ?: false) }
+    var collapsedSections by remember { mutableStateOf(setOf<String>()) }
     var genreMenuBoxState by remember { mutableStateOf(false) }
     var selectedGenreState by remember { mutableStateOf<Genre?>(null) }
     var sourceMenuBoxState by remember { mutableStateOf(false) }
@@ -344,18 +355,43 @@ fun GalleryScreenBody(
             state = listState,
             contentPadding = PaddingValues(top = innerPadding.calculateTopPadding())
         ) {
-            if (uiState.filter != null) {
-                items(uiState.filter.getFilteredItems(uiState.games)) {
-                    GalleryGame(
-                        game = it,
-                        onNavigateToDetail = onNavigateToDetail,
-                        isSelectionMode = isSelectionMode,
-                        isSelected = it.id in uiState.selectedIds,
-                        toggleSelection = toggleSelection
-                    )
+            val filteredGames =
+                uiState.filter?.getFilteredItems(uiState.games) ?: uiState.games
+            if (uiState.sort?.grouped == true) {
+                uiState.sort.getSortedSections(filteredGames).forEach { section ->
+                    val isCollapsed = section.header in collapsedSections
+                    item(
+                        key = "section_${section.header}",
+                        span = { GridItemSpan(maxLineSpan) }
+                    ) {
+                        SortSectionHeader(
+                            title = section.header,
+                            collapsed = isCollapsed,
+                            onToggle = {
+                                collapsedSections = if (isCollapsed) {
+                                    collapsedSections - section.header
+                                } else {
+                                    collapsedSections + section.header
+                                }
+                            }
+                        )
+                    }
+                    if (!isCollapsed) {
+                        items(section.games) { game ->
+                            GalleryGame(
+                                game = game,
+                                onNavigateToDetail = onNavigateToDetail,
+                                isSelectionMode = isSelectionMode,
+                                isSelected = game.id in uiState.selectedIds,
+                                toggleSelection = toggleSelection
+                            )
+                        }
+                    }
                 }
             } else {
-                items(uiState.games) {
+                val displayGames =
+                    uiState.sort?.getSortedItems(filteredGames) ?: filteredGames
+                items(displayGames) {
                     GalleryGame(
                         game = it,
                         onNavigateToDetail = onNavigateToDetail,
@@ -372,6 +408,132 @@ fun GalleryScreenBody(
                 onDismissRequest = { showFilterSheet = false }
             ) {
                 Column {
+                    // sorting subheading
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Sort",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    // have a row for the sort-by dropdown and the ascending/descending toggle
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth()
+                    ) {
+                        ExposedDropdownMenuBox(
+                            expanded = sortMenuBoxState,
+                            onExpandedChange = { sortMenuBoxState = !sortMenuBoxState },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            val selectedSort = uiState.sort?.criteria
+                            TextField(
+                                readOnly = true,
+                                value = when (selectedSort) {
+                                    SortBy.NAME -> "Name"
+                                    SortBy.PLATFORM -> "Platform"
+                                    SortBy.RELEASED -> "Release date"
+                                    null -> "Select sort"
+                                },
+                                onValueChange = { },
+                                label = { Text("Sort by") },
+                                trailingIcon = {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(
+                                        expanded = sortMenuBoxState
+                                    )
+                                },
+                                colors = ExposedDropdownMenuDefaults.textFieldColors(),
+                                modifier = Modifier
+                                    .menuAnchor(
+                                        ExposedDropdownMenuAnchorType.PrimaryNotEditable,
+                                        true
+                                    )
+                                    .fillMaxWidth()
+                            )
+                            ExposedDropdownMenu(
+                                expanded = sortMenuBoxState,
+                                onDismissRequest = { sortMenuBoxState = false },
+                            ) {
+                                SortBy.entries.forEach { criteria ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                when (criteria) {
+                                                    SortBy.NAME -> "Name"
+                                                    SortBy.PLATFORM -> "Platform"
+                                                    SortBy.RELEASED -> "Release date"
+                                                }
+                                            )
+                                        },
+                                        onClick = {
+                                            sortMenuBoxState = false
+                                            onUpdateSort(
+                                                Sort(
+                                                    criteria,
+                                                    sortAscending,
+                                                    uiState.sort?.grouped ?: false
+                                                )
+                                            )
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+                        }
+                        val sortArrowRotation by animateFloatAsState(
+                            targetValue = if (sortAscending) 0f else 180f,
+                            animationSpec = tween(durationMillis = 200),
+                            label = "SortArrowRotation"
+                        )
+                        IconButton(
+                            onClick = {
+                                sortAscending = !sortAscending
+                                onUpdateSort(
+                                    (uiState.sort ?: Sort(SortBy.NAME, sortAscending))
+                                        .copy(ascending = sortAscending)
+                                )
+                            },
+                            modifier = Modifier.padding(start = 8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowUp,
+                                contentDescription = if (sortAscending) "Sort ascending"
+                                else "Sort descending",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.rotate(sortArrowRotation)
+                            )
+                        }
+                    }
+                    // have a row for grouping the sorted items into collapsible sections
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Group into sections",
+                        )
+                        Switch(
+                            checked = uiState.sort?.grouped == true,
+                            onCheckedChange = {
+                                val currentSort = uiState.sort
+                                    ?: Sort(SortBy.RELEASED, sortAscending)
+                                onUpdateSort(currentSort.copy(grouped = it))
+                            }
+                        )
+                    }
+
                     // filters subheading (genre selector below is also a filter)
                     Row(
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -802,6 +964,45 @@ fun NeoSearchBar(
 
 
 @Composable
+fun SortSectionHeader(
+    title: String,
+    collapsed: Boolean,
+    onToggle: () -> Unit
+) {
+    val arrowRotation by animateFloatAsState(
+        targetValue = if (collapsed) 0f else 180f,
+        animationSpec = tween(durationMillis = 200),
+        label = "SectionArrowRotation"
+    )
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onToggle() }
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        HorizontalDivider(
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 8.dp)
+        )
+        IconButton(onClick = onToggle) {
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowUp,
+                contentDescription = if (collapsed) "Expand section" else "Collapse section",
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.rotate(arrowRotation)
+            )
+        }
+    }
+}
+
+@Composable
 fun FilterButton(
     hasFilters: Boolean,
     openFilter: () -> Unit
@@ -967,6 +1168,7 @@ private fun GalleryPreview() {
         textFieldState = TextFieldState(),
         uiState = uiState,
         onUpdateFilter = {},
+        onUpdateSort = {},
         onNavigateToDetail = {},
         onReviewNonImported = {},
         getSearchedGamesList = { return@GalleryScreenBody listOf() },

@@ -32,7 +32,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class GalleryUiState( // TODO put the selected games into here
-    val sort: Sort? = Sort(SortBy.RELEASED, false), // TODO Sort is not implemented
+    val sort: Sort? = Sort(SortBy.NAME, true),
     val filter: Filter? = null,
     val games: List<Game> = emptyList(), // Stores games
     val selectedIds: Set<Long> = emptySet() // Stores game IDs

@@ -162,7 +162,8 @@ class GameLibraryRepository(
             var newGame = existingGame.copy(
                 playTime = maxOf(existingGame.playTime, missingGame.playTime),
                 source = existingGame.source.plus(library),
-                platform = existingGame.platform.plus(platform)
+                platform = existingGame.platform.plus(platform),
+                releaseDate = if (igdbGame.releaseDate != 0L) igdbGame.releaseDate else existingGame.releaseDate
             )
             newGame = newGame.withStoreIdsFrom(missingGame)
             if (newGame.status.isEmpty()) {
@@ -303,7 +304,8 @@ class GameLibraryRepository(
                                         var newGame = existingGame.copy(
                                             playTime = highestPlaytime,
                                             source = existingGame.source.plus(game.source),
-                                            platform = existingGame.platform.plus(game.platform)
+                                            platform = existingGame.platform.plus(game.platform),
+                                            releaseDate = if (game.releaseDate != 0L) game.releaseDate else existingGame.releaseDate
                                         )
                                         // Copy the game Id
                                         newGame = dataSource.copyWithID(newGame, game)

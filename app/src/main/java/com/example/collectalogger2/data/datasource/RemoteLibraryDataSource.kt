@@ -102,6 +102,7 @@ abstract class RemoteLibraryDataSource(val gameDao: GameDao) {
                     ${gamePrefix}involved_companies.company.name, 
                     ${gamePrefix}involved_companies.developer, 
                     ${gamePrefix}involved_companies.publisher, 
+                    ${gamePrefix}first_release_date,
                     ${gamePrefix}cover.image_id;
                     where $identifierName = (${gamesSnippet.keys.joinToString(separator = ",") { "\"$it\""}}) $updateParam
                     ${if (!otherGameFilter.isEmpty()) "& $otherGameFilter" else ""};
@@ -148,6 +149,7 @@ abstract class RemoteLibraryDataSource(val gameDao: GameDao) {
 
                 val title = igdbResponseObj.getString("name")
                 val igdbId = igdbResponseObj.getLong("id")
+                val releaseDate = igdbResponseObj.optLong("first_release_date")
                 val description = if (igdbResponseObj.has("summary")) igdbResponseObj.getString("summary") else ""
                 val cover = if (igdbResponseObj.has("cover")) igdbResponseObj.get("cover") as JSONObject else null
                 val artworks = if (igdbResponseObj.has("artworks")) igdbResponseObj.get("artworks") as JSONArray else null
@@ -196,7 +198,8 @@ abstract class RemoteLibraryDataSource(val gameDao: GameDao) {
                     screenshots = screenshotList,
                     genre = genres,
                     developers = developers.toSet(),
-                    publishers = publishers.toSet()
+                    publishers = publishers.toSet(),
+                    releaseDate = releaseDate
                 )
                 gameList.add(addToSourceLibrary(game, localId))
             }

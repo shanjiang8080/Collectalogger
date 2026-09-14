@@ -63,7 +63,8 @@ private suspend fun searchIGDBOnce(search: String, limit: Int): List<Game> {
         genres.name,
         involved_companies.company.name,
         involved_companies.developer,
-        involved_companies.publisher;
+        involved_companies.publisher,
+        first_release_date;
         limit $limit;
     """.trimIndent()
     val response = IGDBSource.makeAPICall(
@@ -103,7 +104,8 @@ private suspend fun searchIGDBOnce(search: String, limit: Int): List<Game> {
                 imageUrl = if (cover != null) "https://images.igdb.com/igdb/image/upload/t_cover_big/${cover.get("image_id")}.jpg" else "",
                 genre = genres,
                 developers = developers.toSet(),
-                publishers = publishers.toSet()
+                publishers = publishers.toSet(),
+                releaseDate = responseObj.optLong("first_release_date")
             )
         )
     }
