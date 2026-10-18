@@ -77,6 +77,13 @@ configure<ApplicationExtension> {
     testOptions {
         unitTests.isReturnDefaultValues = true
     }
+
+    lint {
+        // All user-facing text must go through string resources (translation scaffolding)
+        error += "HardcodedText"
+        // False positives: Room's KSP-generated code accesses Room internals
+        disable += "RestrictedApi"
+    }
 }
 
 configurations.all {

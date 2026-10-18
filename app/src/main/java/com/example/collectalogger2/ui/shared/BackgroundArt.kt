@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import coil3.compose.AsyncImage
 import com.example.collectalogger2.R
 import com.example.collectalogger2.data.Game
@@ -20,14 +21,14 @@ fun BackgroundArt(
     if (game.backgroundUrl != "") {
         AsyncImage(
             model = game.backgroundUrl,
-            contentDescription = "Background art of ${game.title}",
+            contentDescription = stringResource(R.string.background_art_cd, game.title),
             contentScale = ContentScale.Crop,
             modifier = modifier
         )
     } else {
         Image(
             painter = painterResource(id = R.drawable.background_placeholder),
-            contentDescription = "Placeholder background",
+            contentDescription = stringResource(R.string.placeholder_background_cd),
             contentScale = ContentScale.Crop,
             modifier = modifier
         )

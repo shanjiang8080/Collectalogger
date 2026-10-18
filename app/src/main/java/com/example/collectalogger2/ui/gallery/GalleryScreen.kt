@@ -1,7 +1,6 @@
 package com.example.collectalogger2.ui.gallery
 
 import android.annotation.SuppressLint
-import android.graphics.fonts.FontStyle
 import android.util.Log
 import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.EaseOutBack
@@ -41,7 +40,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -91,7 +89,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -99,12 +100,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.collectalogger2.R
 import com.example.collectalogger2.data.Game
-import com.example.collectalogger2.data.Genre
 import com.example.collectalogger2.ui.overlays.AmazonOverlay
 import com.example.collectalogger2.ui.overlays.EpicOverlay
 import com.example.collectalogger2.ui.overlays.SteamOverlay
 import com.example.collectalogger2.ui.shared.CoverArt
 import com.example.collectalogger2.util.Filter
+import com.example.collectalogger2.util.Genre
 import com.example.collectalogger2.util.LocalNavEventBus
 import com.example.collectalogger2.util.PlayStatus
 import com.example.collectalogger2.util.Sort
@@ -126,7 +127,7 @@ fun GalleryScreen(
     val listState = rememberSaveable(saver = LazyGridState.Saver) {
         LazyGridState()
     }
-    val allGenres by viewModel.allGameGenres.collectAsStateWithLifecycle()
+    val allGenres = viewModel.allGameGenres
     val loadPercentage by viewModel.loadPercentage.collectAsStateWithLifecycle()
 
     // Go back to the top
@@ -224,6 +225,7 @@ fun GalleryScreenBody(
 
 
     // Dunno where to put this
+    val resources = LocalResources.current
     LaunchedEffect(Unit) {
         uiEvents.collect { event ->
             when (event) {
@@ -232,7 +234,7 @@ fun GalleryScreenBody(
                 }
                 is UiEvent.ShowError -> {
                     snackbarHostState.showSnackbar(
-                        message = event.message
+                        message = event.message.resolve(resources)
                     )
                 }
                 is UiEvent.ShowSnackbar -> {
@@ -247,7 +249,7 @@ fun GalleryScreenBody(
                             duration = SnackbarDuration.Short
                         }
                         is SnackbarActionType.NonImportedGames -> {
-                            actionLabel = "Review"
+                            actionLabel = resources.getString(R.string.review)
                             withDismissAction = true
                             duration = SnackbarDuration.Indefinite
                             performedAction = onReviewNonImported
@@ -255,7 +257,7 @@ fun GalleryScreenBody(
                     }
 
                     val result = snackbarHostState.showSnackbar(
-                        message = event.message,
+                        message = event.message.resolve(resources),
                         actionLabel = actionLabel,
                         withDismissAction = withDismissAction,
                         duration = duration
@@ -300,14 +302,15 @@ fun GalleryScreenBody(
             if (isSelectionMode) {
                 TopAppBar(
                     title = {
-                        Text("${uiState.selectedIds.size} selected")
+                        val selectedCount = uiState.selectedIds.size
+                        Text(pluralStringResource(R.plurals.gallery_selected_count, selectedCount, selectedCount))
                     },
                     modifier = Modifier,
                     navigationIcon = {
                         IconButton(onClick = clearSelection) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Clear Selection"
+                                contentDescription = stringResource(R.string.gallery_clear_selection_cd)
                             )
                         }
                     },
@@ -417,7 +420,7 @@ fun GalleryScreenBody(
                             .fillMaxWidth()
                     ) {
                         Text(
-                            text = "Sort",
+                            text = stringResource(R.string.gallery_sort_title),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
@@ -439,13 +442,13 @@ fun GalleryScreenBody(
                             TextField(
                                 readOnly = true,
                                 value = when (selectedSort) {
-                                    SortBy.NAME -> "Name"
-                                    SortBy.PLATFORM -> "Platform"
-                                    SortBy.RELEASED -> "Release date"
-                                    null -> "Select sort"
+                                    SortBy.NAME -> stringResource(R.string.gallery_sort_name)
+                                    SortBy.PLATFORM -> stringResource(R.string.gallery_sort_platform)
+                                    SortBy.RELEASED -> stringResource(R.string.gallery_sort_release_date)
+                                    null -> stringResource(R.string.gallery_select_sort)
                                 },
                                 onValueChange = { },
-                                label = { Text("Sort by") },
+                                label = { Text(stringResource(R.string.gallery_sort_by)) },
                                 trailingIcon = {
                                     ExposedDropdownMenuDefaults.TrailingIcon(
                                         expanded = sortMenuBoxState
@@ -468,9 +471,9 @@ fun GalleryScreenBody(
                                         text = {
                                             Text(
                                                 when (criteria) {
-                                                    SortBy.NAME -> "Name"
-                                                    SortBy.PLATFORM -> "Platform"
-                                                    SortBy.RELEASED -> "Release date"
+                                                    SortBy.NAME -> stringResource(R.string.gallery_sort_name)
+                                                    SortBy.PLATFORM -> stringResource(R.string.gallery_sort_platform)
+                                                    SortBy.RELEASED -> stringResource(R.string.gallery_sort_release_date)
                                                 }
                                             )
                                         },
@@ -506,8 +509,9 @@ fun GalleryScreenBody(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.KeyboardArrowUp,
-                                contentDescription = if (sortAscending) "Sort ascending"
-                                else "Sort descending",
+                                contentDescription = if (sortAscending)
+                                    stringResource(R.string.gallery_sort_ascending_cd)
+                                else stringResource(R.string.gallery_sort_descending_cd),
                                 tint = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.rotate(sortArrowRotation)
                             )
@@ -522,7 +526,7 @@ fun GalleryScreenBody(
                             .fillMaxWidth()
                     ) {
                         Text(
-                            text = "Group into sections",
+                            text = stringResource(R.string.gallery_group_into_sections),
                         )
                         Switch(
                             checked = uiState.sort?.grouped == true,
@@ -543,7 +547,7 @@ fun GalleryScreenBody(
                             .fillMaxWidth()
                     ) {
                         Text(
-                            text = "Filters",
+                            text = stringResource(R.string.gallery_filters_title),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
@@ -565,7 +569,7 @@ fun GalleryScreenBody(
                             },
                             enabled = hasFiltersApplied
                         ) {
-                            Text("Reset Filters")
+                            Text(stringResource(R.string.gallery_reset_filters))
                         }
                     }
                     // have a row for filters by favorites
@@ -577,7 +581,7 @@ fun GalleryScreenBody(
                             .fillMaxWidth()
                     ) {
                         Text(
-                            text = "Favorites only",
+                            text = stringResource(R.string.gallery_favorites_only),
                         )
                         Switch(
                             checked = favoritesChecked,
@@ -602,9 +606,10 @@ fun GalleryScreenBody(
                             ) {
                                 TextField(
                                     readOnly = true,
-                                    value = selectedGenreState?.name ?: "Select genre",
+                                    value = selectedGenreState?.let { stringResource(it.nameRes) }
+                                        ?: stringResource(R.string.gallery_select_genre),
                                     onValueChange = { },
-                                    label = { Text("Genre") },
+                                    label = { Text(stringResource(R.string.gallery_genre)) },
                                     trailingIcon = {
                                         ExposedDropdownMenuDefaults.TrailingIcon(
                                             expanded = genreMenuBoxState
@@ -630,7 +635,7 @@ fun GalleryScreenBody(
                                     LazyColumn {
                                         item {
                                             DropdownMenuItem(
-                                                text = { Text("No filters") },
+                                                text = { Text(stringResource(R.string.gallery_no_filters)) },
                                                 onClick = {
                                                     selectedGenreState = null
                                                     genreMenuBoxState = false
@@ -641,7 +646,7 @@ fun GalleryScreenBody(
                                         items(count = allGenres.size) { num ->
                                             val genre = allGenres[num]
                                             DropdownMenuItem(
-                                                text = { Text(genre.name) },
+                                                text = { Text(stringResource(genre.nameRes)) },
                                                 onClick = {
                                                     selectedGenreState = genre
                                                     genreMenuBoxState = false
@@ -679,9 +684,10 @@ fun GalleryScreenBody(
                             val selectedSource = uiState.filter?.library?.firstOrNull()
                             TextField(
                                 readOnly = true,
-                                value = selectedSource ?: "All sources",
+                                value = selectedSource
+                                    ?: stringResource(R.string.gallery_all_sources),
                                 onValueChange = { },
-                                label = { Text("Source") },
+                                label = { Text(stringResource(R.string.gallery_source)) },
                                 trailingIcon = {
                                     ExposedDropdownMenuDefaults.TrailingIcon(
                                         expanded = sourceMenuBoxState
@@ -700,7 +706,7 @@ fun GalleryScreenBody(
                                 onDismissRequest = { sourceMenuBoxState = false },
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("All sources") },
+                                    text = { Text(stringResource(R.string.gallery_all_sources)) },
                                     onClick = {
                                         sourceMenuBoxState = false
                                         onUpdateFilter(uiState.filter!!.copy(library = null))
@@ -741,9 +747,10 @@ fun GalleryScreenBody(
                             val selectedPlatform = uiState.filter?.platform?.firstOrNull()
                             TextField(
                                 readOnly = true,
-                                value = selectedPlatform ?: "All platforms",
+                                value = selectedPlatform
+                                    ?: stringResource(R.string.gallery_all_platforms),
                                 onValueChange = { },
-                                label = { Text("Platform") },
+                                label = { Text(stringResource(R.string.gallery_platform)) },
                                 trailingIcon = {
                                     ExposedDropdownMenuDefaults.TrailingIcon(
                                         expanded = platformMenuBoxState
@@ -762,7 +769,7 @@ fun GalleryScreenBody(
                                 onDismissRequest = { platformMenuBoxState = false },
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("All platforms") },
+                                    text = { Text(stringResource(R.string.gallery_all_platforms)) },
                                     onClick = {
                                         platformMenuBoxState = false
                                         onUpdateFilter(uiState.filter!!.copy(platform = null))
@@ -787,15 +794,7 @@ fun GalleryScreenBody(
                     }
 
                     // have a row for filters by play status
-                    val allPlayStatuses = listOf(
-                        PlayStatus.Unplayed,
-                        PlayStatus.Playing,
-                        PlayStatus.Played,
-                        PlayStatus.Planned,
-                        PlayStatus.Completed,
-                        PlayStatus.Beaten,
-                        PlayStatus.Abandoned
-                    )
+                    val allPlayStatuses = PlayStatus.all
                     Row(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
@@ -811,9 +810,11 @@ fun GalleryScreenBody(
                             val selectedPlayStatus = uiState.filter?.playStatus
                             TextField(
                                 readOnly = true,
-                                value = selectedPlayStatus ?: "All play statuses",
+                                value = selectedPlayStatus
+                                    ?.let { PlayStatus.displayResOf(it)?.let { res -> stringResource(res) } }
+                                    ?: stringResource(R.string.gallery_all_play_statuses),
                                 onValueChange = { },
-                                label = { Text("Play status") },
+                                label = { Text(stringResource(R.string.gallery_play_status)) },
                                 trailingIcon = {
                                     ExposedDropdownMenuDefaults.TrailingIcon(
                                         expanded = playStatusMenuBoxState
@@ -832,7 +833,7 @@ fun GalleryScreenBody(
                                 onDismissRequest = { playStatusMenuBoxState = false },
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("All play statuses") },
+                                    text = { Text(stringResource(R.string.gallery_all_play_statuses)) },
                                     onClick = {
                                         playStatusMenuBoxState = false
                                         onUpdateFilter(uiState.filter!!.copy(playStatus = null))
@@ -840,7 +841,12 @@ fun GalleryScreenBody(
                                 )
                                 allPlayStatuses.forEach { status ->
                                     DropdownMenuItem(
-                                        text = { Text(status) },
+                                        text = {
+                                            Text(
+                                                PlayStatus.displayResOf(status)
+                                                    ?.let { stringResource(it) } ?: status
+                                            )
+                                        },
                                         onClick = {
                                             playStatusMenuBoxState = false
                                             onUpdateFilter(
@@ -893,7 +899,7 @@ fun NeoSearchBar(
                 },
                 expanded = searchBarState.currentValue == SearchBarValue.Expanded,
                 leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = "Search button")
+                    Icon(Icons.Default.Search, contentDescription = stringResource(R.string.gallery_search_button_cd))
                 },
                 trailingIcon = {
                     Row {
@@ -918,7 +924,7 @@ fun NeoSearchBar(
                         }
                     }
                 },
-                placeholder = { Text("Search your library") }
+                placeholder = { Text(stringResource(R.string.gallery_search_library)) }
             )
         }
 
@@ -994,7 +1000,8 @@ fun SortSectionHeader(
         IconButton(onClick = onToggle) {
             Icon(
                 imageVector = Icons.Default.KeyboardArrowUp,
-                contentDescription = if (collapsed) "Expand section" else "Collapse section",
+                contentDescription = if (collapsed) stringResource(R.string.gallery_expand_section_cd)
+            else stringResource(R.string.gallery_collapse_section_cd),
                 tint = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.rotate(arrowRotation)
             )
@@ -1012,13 +1019,13 @@ fun FilterButton(
             Icon(
                 painter = painterResource(id = R.drawable.mic_filter_filled),
                 tint = MaterialTheme.colorScheme.primary,
-                contentDescription = "Favorite button (filled)"
+                contentDescription = stringResource(R.string.gallery_filter_button_filled_cd)
             )
         } else {
             Icon(
                 painter = painterResource(id = R.drawable.mic_filter_unfilled),
                 tint = MaterialTheme.colorScheme.onSurface,
-                contentDescription = "Favorite button (unfilled)"
+                contentDescription = stringResource(R.string.gallery_filter_button_unfilled_cd)
             )
         }
     }
@@ -1029,7 +1036,7 @@ fun SearchClearButton(clearFilter: () -> Unit) {
     IconButton(onClick = clearFilter) {
         Icon(
             imageVector = Icons.Default.Clear,
-            contentDescription = "Clear search query",
+            contentDescription = stringResource(R.string.gallery_clear_search_cd),
             tint = MaterialTheme.colorScheme.onSurface
         )
     }
@@ -1043,7 +1050,7 @@ fun FloatingRefreshButton(onClick: () -> Unit, loading: Boolean) {
             containerColor = MaterialTheme.colorScheme.secondaryContainer,
             contentColor = MaterialTheme.colorScheme.secondary,
         ) {
-            Icon(Icons.Filled.Refresh, "Update games button.")
+            Icon(Icons.Filled.Refresh, stringResource(R.string.gallery_update_games_cd))
         }
     } else {
         FloatingActionButton(
@@ -1051,7 +1058,7 @@ fun FloatingRefreshButton(onClick: () -> Unit, loading: Boolean) {
             containerColor = MaterialTheme.colorScheme.surfaceDim,
             contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         ) {
-            Icon(Icons.Filled.Refresh, "Update games button (disabled).")
+            Icon(Icons.Filled.Refresh, stringResource(R.string.gallery_update_games_disabled_cd))
         }
     }
 }
@@ -1141,7 +1148,7 @@ private fun GalleryGame(
             if (isSelected && checkboxScale > 0.5f) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "Selected",
+                    contentDescription = stringResource(R.string.gallery_selected_cd),
                     tint = Color.White,
                     modifier = Modifier.size(16.dp)
                 )

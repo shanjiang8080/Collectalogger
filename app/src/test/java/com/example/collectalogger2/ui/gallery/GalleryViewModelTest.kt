@@ -5,7 +5,6 @@ import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.example.collectalogger2.MainDispatcherRule
 import com.example.collectalogger2.data.Game
-import com.example.collectalogger2.data.Genre
 import com.example.collectalogger2.data.datasource.EpicDataSource
 import com.example.collectalogger2.data.repository.GameLibraryRepository
 import com.example.collectalogger2.data.repository.RepositoryEvent
@@ -36,7 +35,6 @@ class GalleryViewModelTest {
 
     // We use actual flows to control data emission
     private val gameStream = MutableStateFlow<List<Game>>(emptyList())
-    private val genreStream = MutableStateFlow<List<Genre>>(emptyList())
     private val eventStream = MutableSharedFlow<RepositoryEvent>()
 
     private lateinit var viewModel: GalleryViewModel
@@ -48,7 +46,6 @@ class GalleryViewModelTest {
 
         // Link repository methods to our test flows
         every { mockGameRepository.getAllGamesStream() } returns gameStream
-        every { mockGameRepository.genreFlow } returns genreStream
         every { mockGameRepository.eventFlow } returns eventStream
 
         // Initialize with empty SavedStateHandle by default

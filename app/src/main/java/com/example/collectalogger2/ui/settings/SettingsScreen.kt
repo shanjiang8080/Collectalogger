@@ -1,5 +1,6 @@
 package com.example.collectalogger2.ui.settings
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
@@ -12,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.collectalogger2.R
@@ -35,7 +37,7 @@ fun SettingsScreen(
 
     Column {
         Text(
-            text = "Log in to services:", // TODO make XML-ized
+            text = stringResource(R.string.settings_log_in_to_services),
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.onSurface
         )
@@ -43,27 +45,27 @@ fun SettingsScreen(
             // make buttons for each library, like Steam, Epic, etc.
             GameLibraryButton(
                 R.drawable.logo_steam,
-                "Steam button",
+                R.string.settings_steam_button_cd,
                 steamId.isEmpty()
             ) { viewModel.setStoreFront("Steam") }
             GameLibraryButton(
                 R.drawable.logo_egs,
-                "Epic Games button",
+                R.string.settings_epic_button_cd,
                 epicInfo.isEmpty()
             ) { viewModel.setStoreFront("Epic") }
             GameLibraryButton(
                 R.drawable.logo_gog,
-                "GOG button",
+                R.string.settings_gog_button_cd,
                 gogUsername.isEmpty()
             ) { viewModel.setStoreFront("GOG") }
             GameLibraryButton(
                 R.drawable.logo_itch,
-                "Itch button",
+                R.string.settings_itch_button_cd,
                 itchSecret.isEmpty()
             ) { viewModel.setStoreFront("Itch") }
             GameLibraryButton(
                 R.drawable.logo_amazon_games,
-                "Amazon button",
+                R.string.settings_amazon_button_cd,
                 amazonInfo.isEmpty()
             ) { viewModel.setStoreFront("Amazon") }
         }
@@ -99,7 +101,7 @@ fun SettingsScreen(
 @Composable
 fun GameLibraryButton(
     icon: Int,
-    description: String,
+    @StringRes descriptionRes: Int,
     isLoggedIn: Boolean,
     onClick: () -> Unit
 ) {
@@ -112,7 +114,7 @@ fun GameLibraryButton(
         ) {
             Icon(
                 painter = painterResource(icon),
-                contentDescription = description,
+                contentDescription = stringResource(descriptionRes),
             )
         }
     } else {
@@ -123,7 +125,7 @@ fun GameLibraryButton(
         ) {
             Icon(
                 painter = painterResource(icon),
-                contentDescription = description,
+                contentDescription = stringResource(descriptionRes),
             )
         }
 

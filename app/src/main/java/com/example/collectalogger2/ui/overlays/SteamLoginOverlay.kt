@@ -16,9 +16,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.example.collectalogger2.R
 
 @Composable
 fun SteamOverlay(
@@ -32,16 +34,15 @@ fun SteamOverlay(
             verticalArrangement = Arrangement.spacedBy(20.dp),
             modifier = Modifier.padding(16.dp)
         ) {
-            Text("Enter the URL to your Steam Profile. Note that URLs with" +
-                    " numerical IDs and usernames are both accepted.",
+            Text(stringResource(R.string.overlay_steam_instructions),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface
-            ) // TODO XML-ize this
+            )
             var steamId by remember { mutableStateOf("") }
             TextField(
                 value = steamId,
                 onValueChange = { steamId = it },
-                label = { Text("Steam Profile URL") },
+                label = { Text(stringResource(R.string.overlay_steam_profile_url)) },
                 placeholder = { Text("https://steamcommunity.com/id/name/") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
@@ -57,7 +58,7 @@ fun SteamOverlay(
                         onDismiss()
                     }
                 ) {
-                    Text("Save")
+                    Text(stringResource(R.string.save))
                 }
                 Button(
                     colors = ButtonDefaults.buttonColors(
@@ -67,7 +68,7 @@ fun SteamOverlay(
                     onClick = {
                         onDismiss()
                     }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
 
             }

@@ -63,6 +63,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -73,7 +74,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.example.collectalogger2.R
 import com.example.collectalogger2.data.Game
-import com.example.collectalogger2.data.Genre
 import com.example.collectalogger2.data.datasource.AmazonGamesDataSource
 import com.example.collectalogger2.data.datasource.EpicDataSource
 import com.example.collectalogger2.data.datasource.GogDataSource
@@ -81,6 +81,7 @@ import com.example.collectalogger2.data.datasource.ItchDataSource
 import com.example.collectalogger2.data.datasource.SteamDataSource
 import com.example.collectalogger2.ui.shared.BackgroundArt
 import com.example.collectalogger2.ui.shared.CoverArt
+import com.example.collectalogger2.util.Genre
 import com.example.collectalogger2.util.PlayStatus
 import kotlin.math.floor
 
@@ -141,7 +142,7 @@ fun DetailScreenBody(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back button",
+                            contentDescription = stringResource(R.string.detail_back_cd),
                             modifier = Modifier.height(48.dp)
                         )
                     }
@@ -153,7 +154,7 @@ fun DetailScreenBody(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Create,
-                            contentDescription = "Edit"
+                            contentDescription = stringResource(R.string.edit)
                         )
                     }
                 }
@@ -233,7 +234,7 @@ fun DetailScreenBody(
                                 game.developers,
                                 onSelectGalleryFilter,
                                 iconPainter = painterResource(R.drawable.mic_developer),
-                                iconDescription = "Developer icon",
+                                iconDescription = stringResource(R.string.detail_developer_icon_cd),
                                 isPublisher = false
                             )
                             // For publishers
@@ -241,7 +242,7 @@ fun DetailScreenBody(
                                 game.publishers,
                                 onSelectGalleryFilter,
                                 iconPainter = painterResource(R.drawable.mic_publisher),
-                                iconDescription = "Publisher icon",
+                                iconDescription = stringResource(R.string.detail_publisher_icon_cd),
                                 isPublisher = true
                             )
                         }
@@ -261,16 +262,21 @@ fun DetailScreenBody(
                                 ) {
                                     LabelIconCombo(
                                         iconPainter = painterResource(R.drawable.mic_schedule),
-                                        iconDescription = "Time played icon",
-                                        textLabel = "Time Played",
-                                        textValue = if (game.playTime > 0) "${String.format("%.1f",game.playTime / 60f)} hours" else "Unplayed",
+                                        iconDescription = stringResource(R.string.detail_time_played_icon_cd),
+                                        textLabel = stringResource(R.string.detail_time_played),
+                                        textValue = if (game.playTime > 0)
+                                            stringResource(R.string.gallery_hours_amount, game.playTime / 60f)
+                                        else
+                                            stringResource(R.string.status_unplayed),
                                         textAction = { setDialog("TimePlayed") }
                                     )
                                     LabelIconCombo(
                                         iconPainter = choosePlayStatusIcon(game),
-                                        iconDescription = "Play status icon",
-                                        textLabel = "Play Status",
-                                        textValue = if (!game.status.isEmpty()) game.status else PlayStatus.Unplayed,
+                                        iconDescription = stringResource(R.string.detail_play_status_icon_cd),
+                                        textLabel = stringResource(R.string.detail_play_status),
+                                        textValue = PlayStatus.displayResOf(
+                                            game.status.ifEmpty { PlayStatus.Unplayed }
+                                        )?.let { stringResource(it) } ?: game.status,
                                         textAction = { setDialog("PlayStatus") }
                                     )
                                 }
@@ -303,7 +309,7 @@ fun DetailScreenBody(
                                 .padding(10.dp)
                         ) {
                             Column {
-                                TextLabel("Description")
+                                TextLabel(stringResource(R.string.detail_description))
                                 Text(
                                     text = game.description,
                                     style = MaterialTheme.typography.bodyMedium,
@@ -312,7 +318,7 @@ fun DetailScreenBody(
                             }
                             // Add the carousel for screenshots
                             Column {
-                                TextLabel("Images")
+                                TextLabel(stringResource(R.string.detail_images))
                                 ScreenshotCarousel(game)
                             }
 
@@ -403,13 +409,13 @@ private fun FavoriteIcon(game: Game, toggleFavorite: () -> Unit) {
             Icon(
                 imageVector = Icons.Filled.Favorite,
                 tint = MaterialTheme.colorScheme.primary,
-                contentDescription = "Favorite button (filled)"
+                contentDescription = stringResource(R.string.detail_favorite_filled_cd)
             )
         } else {
             Icon(
                 imageVector = Icons.Filled.FavoriteBorder,
                 tint = MaterialTheme.colorScheme.onSurface,
-                contentDescription = "Favorite button (unfilled)"
+                contentDescription = stringResource(R.string.detail_favorite_unfilled_cd)
             )
         }
     }
@@ -436,7 +442,7 @@ private fun GenreCard(
         ) {
             // Label
             TextLabel(
-                text = "Genres",
+                text = stringResource(R.string.detail_genres),
                 color = MaterialTheme.colorScheme.secondary
             )
             FlowRow(
@@ -457,7 +463,7 @@ private fun GenreCard(
                         },
                         label = {
                             Text(
-                                text = genre.name,
+                                text = stringResource(genre.nameRes),
                                 color = MaterialTheme.colorScheme.secondary
                             )
                         },
@@ -502,7 +508,7 @@ private fun ScreenshotCarousel(game: Game) {
             val item = game.screenshots[i]
             AsyncImage(
                 model = item,
-                contentDescription = "Screenshot $i of ${game.title}",
+                contentDescription = stringResource(R.string.detail_screenshot_cd, i, game.title),
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .height(205.dp)
@@ -531,7 +537,7 @@ private fun PlatformsOwnedBar(game: Game) {
                     .padding(10.dp, 7.dp, 10.dp, 10.dp)
             ) {
                 TextLabel(
-                    text = "Owned on",
+                    text = stringResource(R.string.detail_owned_on),
                     color = MaterialTheme.colorScheme.secondary,
                 )
                 Column(
@@ -543,7 +549,7 @@ private fun PlatformsOwnedBar(game: Game) {
                         // Display a Steam icon
                         Icon(
                             painter = painterResource(id = R.drawable.logo_steam),
-                            contentDescription = "Steam logo",
+                            contentDescription = stringResource(R.string.detail_steam_logo_cd),
                             modifier = Modifier.size(24.dp),
                             tint = MaterialTheme.colorScheme.secondary,
                         )
@@ -552,7 +558,7 @@ private fun PlatformsOwnedBar(game: Game) {
                         // Display an Epic icon
                         Icon(
                             painter = painterResource(id = R.drawable.logo_egs),
-                            contentDescription = "Epic logo",
+                            contentDescription = stringResource(R.string.detail_epic_logo_cd),
                             modifier = Modifier.size(24.dp),
                             tint = MaterialTheme.colorScheme.secondary
                         )
@@ -561,7 +567,7 @@ private fun PlatformsOwnedBar(game: Game) {
                         // Display a GOG icon
                         Icon(
                             painter = painterResource(id = R.drawable.logo_gog),
-                            contentDescription = "GOG logo",
+                            contentDescription = stringResource(R.string.detail_gog_logo_cd),
                             modifier = Modifier.size(24.dp),
                             tint = MaterialTheme.colorScheme.secondary
                         )
@@ -570,7 +576,7 @@ private fun PlatformsOwnedBar(game: Game) {
                         // Display an Itch icon
                         Icon(
                             painter = painterResource(id = R.drawable.logo_itch),
-                            contentDescription = "Itch logo",
+                            contentDescription = stringResource(R.string.detail_itch_logo_cd),
                             modifier = Modifier.size(24.dp),
                             tint = MaterialTheme.colorScheme.secondary
                         )
@@ -579,7 +585,7 @@ private fun PlatformsOwnedBar(game: Game) {
                         // Display an Amazon Games icon
                         Icon(
                             painter = painterResource(id = R.drawable.logo_amazon_games),
-                            contentDescription = "Amazon Games logo",
+                            contentDescription = stringResource(R.string.detail_amazon_games_logo_cd),
                             modifier = Modifier.size(24.dp),
                             tint = MaterialTheme.colorScheme.secondary
                         )
@@ -620,7 +626,7 @@ private fun PlayTimeDialog(
                 modifier = Modifier.padding(20.dp)
             ) {
                 Text(
-                    text = "Time Played",
+                    text = stringResource(R.string.detail_time_played),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -629,7 +635,7 @@ private fun PlayTimeDialog(
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.mic_schedule),
-                        contentDescription = "Time played icon",
+                        contentDescription = stringResource(R.string.detail_time_played_icon_cd),
                         modifier = Modifier.size(32.dp)
                     )
                     Row(
@@ -641,11 +647,11 @@ private fun PlayTimeDialog(
 
                         BigHighlightHorizontalLabel(
                             textBig = "${floor((time / 60f)).toLong()}",
-                            textSmall = "hours"
+                            textSmall = stringResource(R.string.detail_hours)
                         )
                         BigHighlightHorizontalLabel(
                             textBig = "${time % 60}",
-                            textSmall = "minutes"
+                            textSmall = stringResource(R.string.detail_minutes)
                         )
                     }
 
@@ -697,19 +703,11 @@ private fun PlayStatusDialog(
                     .padding(20.dp)
             ) {
                 Text(
-                    text = "Edit Play Status",
+                    text = stringResource(R.string.detail_edit_play_status),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                val radioOptions = listOf(
-                    PlayStatus.Unplayed,
-                    PlayStatus.Abandoned,
-                    PlayStatus.Planned,
-                    PlayStatus.Played,
-                    PlayStatus.Playing,
-                    PlayStatus.Beaten,
-                    PlayStatus.Completed,
-                )
+                val radioOptions = PlayStatus.all
                 val (selectedOption, onOptionSelected) = remember { mutableStateOf(gameStatus) }
 
                 Column(modifier = Modifier.selectableGroup()) {
@@ -731,7 +729,7 @@ private fun PlayStatusDialog(
                                 onClick = null
                             )
                             Text(
-                                text = text,
+                                text = PlayStatus.displayResOf(text)?.let { stringResource(it) } ?: text,
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.padding(start = 16.dp)
@@ -751,7 +749,7 @@ private fun PlayStatusDialog(
                             onDismiss()
                         }
                     ) {
-                        Text("Save")
+                        Text(stringResource(R.string.save))
                     }
                     Button(
                         colors = ButtonDefaults.buttonColors(
@@ -761,7 +759,7 @@ private fun PlayStatusDialog(
                         onClick = {
                             onDismiss()
                         }) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.cancel))
                     }
 
                 }
@@ -791,10 +789,10 @@ private fun DetailScreenPreview() {
         source = setOf(SteamDataSource.name, EpicDataSource.name)
     )
     val gameGenres = listOf(
-        Genre("Indie", 0, 0),
-        Genre("RPG", 0, 0),
-        Genre("Simulation", 0, 0),
-        Genre("Simulation", 0, 0)
+        Genre(0, R.string.genre_indie),
+        Genre(12, R.string.genre_rpg),
+        Genre(13, R.string.genre_simulator),
+        Genre(13, R.string.genre_simulator)
     )
     DetailScreenBody(
         game = game,

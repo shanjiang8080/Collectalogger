@@ -4,7 +4,6 @@ import android.content.Context
 import com.example.collectalogger2.data.GameDatabase
 import com.example.collectalogger2.data.datasource.AmazonGamesDataSource
 import com.example.collectalogger2.data.datasource.EpicDataSource
-import com.example.collectalogger2.data.datasource.GenreDataSource
 import com.example.collectalogger2.data.datasource.GogDataSource
 import com.example.collectalogger2.data.datasource.ItchDataSource
 import com.example.collectalogger2.data.datasource.LocalDataSource
@@ -37,7 +36,6 @@ class AppDataContainer(private val context: Context) : AppContainer {
     }
     override val gameLibraryRepository: GameLibraryRepository by lazy {
         val gameDao = GameDatabase.getDatabase(context).gameDao()
-        val genreDao = GameDatabase.getDatabase(context).genreDao()
         val importIgnoredResultDao = GameDatabase.getDatabase(context).importIgnoredResultDao()
 
         GameLibraryRepository(
@@ -77,9 +75,7 @@ class AppDataContainer(private val context: Context) : AppContainer {
                 )
                 .toList(),
             localDataSource = LocalDataSource(),
-            genreDataSource = GenreDataSource(),
             gameDao = gameDao,
-            genreDao = genreDao,
             importIgnoredResultDao = importIgnoredResultDao
         )
     }

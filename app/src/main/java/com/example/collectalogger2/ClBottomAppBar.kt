@@ -1,5 +1,6 @@
 package com.example.collectalogger2
 
+import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Settings
@@ -16,13 +17,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.collectalogger2.util.LocalNavEventBus
 import kotlinx.coroutines.launch
 
 private class Destination(
     val onNavigate: () -> Unit,
-    val name: String,
+    // Stable, locale-neutral key used for scroll-to-top events
+    val scrollKey: String,
+    @StringRes val nameRes: Int,
+    @StringRes val contentDescriptionRes: Int,
     val icon: ImageVector,
 )
 
@@ -34,9 +39,18 @@ fun BottomAppBar(
 ) {
     var selectedDestination by rememberSaveable { mutableIntStateOf(1) /* whatever the gallery is */ }
     val destinations = listOf(
-        Destination(onNavigateToWishlist, "Wishlist", Icons.Rounded.ShoppingCart),
-        Destination(onNavigateToGallery, "Gallery", Icons.Rounded.Home),
-        Destination(onNavigateToSettings, "Settings", Icons.Rounded.Settings),
+        Destination(
+            onNavigateToWishlist, "Wishlist",
+            R.string.nav_wishlist, R.string.nav_wishlist_cd, Icons.Rounded.ShoppingCart
+        ),
+        Destination(
+            onNavigateToGallery, "Gallery",
+            R.string.nav_gallery, R.string.nav_gallery_cd, Icons.Rounded.Home
+        ),
+        Destination(
+            onNavigateToSettings, "Settings",
+            R.string.nav_settings, R.string.nav_settings_cd, Icons.Rounded.Settings
+        ),
     )
     val scope = rememberCoroutineScope()
     val navBus = LocalNavEventBus.current
@@ -52,7 +66,7 @@ fun BottomAppBar(
                     // If you press it again, do it
                     if (selectedDestination == index) {
                         // Send the scroll event through the nav event bus
-                        scope.launch { navBus.emitScrollEvent(destination.name) }
+                        scope.launch { navBus.emitScrollEvent(destination.scrollKey) }
                     } else {
                         destination.onNavigate()
                         selectedDestination = index
@@ -61,11 +75,11 @@ fun BottomAppBar(
                 icon = {
                     Icon(
                         destination.icon,
-                        contentDescription = "${destination.name} icon"
+                        contentDescription = stringResource(destination.contentDescriptionRes)
                     )
                 },
                 label = {
-                    Text(destination.name)
+                    Text(stringResource(destination.nameRes))
                 }
             )
         }

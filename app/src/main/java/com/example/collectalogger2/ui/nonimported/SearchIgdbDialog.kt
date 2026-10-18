@@ -36,10 +36,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.collectalogger2.R
 import com.example.collectalogger2.data.Game
 import com.example.collectalogger2.ui.shared.CoverArt
 
@@ -78,7 +80,7 @@ fun SearchIgdbDialog(
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "Search IGDB",
+                    text = stringResource(R.string.search_igdb_title),
                     style = MaterialTheme.typography.headlineSmall
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -130,14 +132,14 @@ fun SearchIgdbDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.cancel))
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = onConfirm,
                         enabled = uiState.chosenResults.isNotEmpty()
                     ) {
-                        Text("Confirm")
+                        Text(stringResource(R.string.confirm))
                     }
                 }
             }
@@ -175,12 +177,12 @@ fun SearchResultDropdown(
             TextField(
                 value = customSearchTerm,
                 onValueChange = { customSearchTerm = it },
-                label = { Text("Custom search term") },
+                label = { Text(stringResource(R.string.search_igdb_custom_term)) },
                 singleLine = true,
                 trailingIcon = {
                     if (customSearchTerm.isNotEmpty()) {
                         IconButton(onClick = { customSearchTerm = "" }) {
-                            Icon(imageVector = Icons.Default.Close, contentDescription = "Clear search term")
+                            Icon(imageVector = Icons.Default.Close, contentDescription = stringResource(R.string.search_igdb_clear_term_cd))
                         }
                     }
                 },
@@ -195,13 +197,13 @@ fun SearchResultDropdown(
                 TextButton(
                     onClick = { onToggleCustomSearch(false) }
                 ) {
-                    Text("Back")
+                    Text(stringResource(R.string.back))
                 }
                 Button(
                     onClick = { onExecuteCustomSearch(customSearchTerm.trim()) },
                     enabled = customSearchTerm.isNotBlank()
                 ) {
-                    Text("Search")
+                    Text(stringResource(R.string.search))
                 }
             }
             LaunchedEffect(customSearchTerm) {
@@ -234,7 +236,7 @@ fun SearchResultDropdown(
                         )
                         Text(
                             text = chosen.publishers.joinToString(", ")
-                                .ifEmpty { "No publisher listed" },
+                                .ifEmpty { stringResource(R.string.search_igdb_no_publisher) },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 2,
@@ -270,13 +272,14 @@ fun SearchResultResultDropdownChooser(
     ) {
         // The dropdown text shows the chosen result or the custom search term;
         // the small label above keeps the game's original name
+        val unknownTitle = stringResource(R.string.search_igdb_unknown_title)
         val value = if (chosen != null) chosen.title
-        else (customSearchTerm ?: game.title).ifEmpty { "(Unknown title)" }
+        else (customSearchTerm ?: game.title).ifEmpty { unknownTitle }
         TextField(
             readOnly = true,
             value = value,
             onValueChange = {},
-            label = { Text(game.title.ifEmpty { "(Unknown title)" }) },
+            label = { Text(game.title.ifEmpty { unknownTitle }) },
             trailingIcon = {
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
             },
@@ -292,14 +295,14 @@ fun SearchResultResultDropdownChooser(
             when {
                 results == null -> {
                     DropdownMenuItem(
-                        text = { Text("Searching IGDB...") },
+                        text = { Text(stringResource(R.string.search_igdb_searching)) },
                         onClick = {},
                         enabled = false
                     )
                 }
                 results.isEmpty() -> {
                     DropdownMenuItem(
-                        text = { Text("No IGDB results found") },
+                        text = { Text(stringResource(R.string.search_igdb_no_results)) },
                         onClick = {},
                         enabled = false
                     )
@@ -315,7 +318,7 @@ fun SearchResultResultDropdownChooser(
                                 )
                                 Text(
                                     text = result.publishers.joinToString(", ")
-                                        .ifEmpty { "No publisher listed" },
+                                        .ifEmpty { stringResource(R.string.search_igdb_no_publisher) },
                                     style = MaterialTheme.typography.bodySmall
                                 )
                             }
@@ -332,7 +335,7 @@ fun SearchResultResultDropdownChooser(
                 }
             }
             DropdownMenuItem(
-                text = { Text("Custom search...") },
+                text = { Text(stringResource(R.string.search_igdb_custom_search)) },
                 leadingIcon = {
                     Icon(imageVector = Icons.Default.Edit, contentDescription = null)
                 },
