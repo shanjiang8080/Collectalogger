@@ -216,6 +216,12 @@ class GalleryViewModel(
         }
     }
 
+    fun saveNintendoLogin(cookies: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            settingsRepository.getNintendoLogin(cookies)
+        }
+    }
+
     fun getSearchedGames(search: String) {
         // instead of calling the database, do a filter of the cached games
         if (search.isEmpty()) {

@@ -118,6 +118,8 @@
     <string name="detail_gog_logo_cd">GOG logo</string>
     <string name="detail_itch_logo_cd">Itch logo</string>
     <string name="detail_amazon_games_logo_cd">Amazon Games logo</string>
+    <string name="detail_nintendo_logo_cd">Nintendo Switch logo</string>
+    <string name="detail_nintendo_switch2_logo_cd">Nintendo Switch 2 logo</string>
     <string name="detail_hours">hours</string>
     <string name="detail_minutes">minutes</string>
     <string name="detail_edit_play_status">Edit Play Status</string>
@@ -150,6 +152,7 @@
     <string name="settings_gog_button_cd">GOG button</string>
     <string name="settings_itch_button_cd">Itch button</string>
     <string name="settings_amazon_button_cd">Amazon button</string>
+    <string name="settings_nintendo_button_cd">Nintendo button</string>
 
     <!-- Login overlays -->
     <string name="overlay_steam_instructions">Enter the URL to your Steam Profile. Note that URLs with numerical IDs and usernames are both accepted.</string>

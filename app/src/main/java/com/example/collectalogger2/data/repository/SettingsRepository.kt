@@ -21,6 +21,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val GOG_USERNAME = stringPreferencesKey("gog_username")
         val ITCH_SECRET = stringPreferencesKey("itch_secret")
         val AMAZON_ID_INFO = stringPreferencesKey("amazon_id_info")
+        val NINTENDO_COOKIES = stringPreferencesKey("nintendo_cookies")
     }
     val steamId: Flow<String> =
         dataStore.data.map { preferences ->
@@ -45,6 +46,22 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         dataStore.data.map { preferences ->
             preferences[AMAZON_ID_INFO] ?: ""
         }
+
+    // The Nintendo Account portal cookies, stored as a JSON object
+    // mapping base URLs to raw cookie header strings (see NintendoSource)
+    val nintendoCookies: Flow<String> =
+        dataStore.data.map { preferences ->
+            preferences[NINTENDO_COOKIES] ?: ""
+        }
+
+    suspend fun getNintendoLogin(cookies: String) {
+        try {
+            saveNintendoCookies(cookies)
+            Log.i("Nintendo login info saved!", cookies)
+        } catch (ex: Exception) {
+            Log.e("Failed to save Nintendo login info!", ex.message ?: "")
+        }
+    }
     suspend fun getSteamLogin(url: String) {
         val id: String
         try {
@@ -102,6 +119,10 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
 
     suspend fun saveAmazonIdInfo(info: String) {
         dataStore.edit { it[AMAZON_ID_INFO] = info }
+    }
+
+    suspend fun saveNintendoCookies(cookies: String) {
+        dataStore.edit { it[NINTENDO_COOKIES] = cookies }
     }
 }
 

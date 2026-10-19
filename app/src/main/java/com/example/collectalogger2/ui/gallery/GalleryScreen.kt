@@ -101,6 +101,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.collectalogger2.R
 import com.example.collectalogger2.data.Game
 import com.example.collectalogger2.ui.overlays.AmazonOverlay
+import com.example.collectalogger2.ui.overlays.NintendoOverlay
 import com.example.collectalogger2.ui.overlays.EpicOverlay
 import com.example.collectalogger2.ui.overlays.SteamOverlay
 import com.example.collectalogger2.ui.shared.CoverArt
@@ -165,6 +166,7 @@ fun GalleryScreen(
         saveSteamId = { viewModel.saveSteamId(it) },
         saveEpicId = { viewModel.saveEpicInfo(it) },
         saveAmazonLogin = { code, verifier -> viewModel.saveAmazonInfo(code, verifier) },
+        saveNintendoLogin = { viewModel.saveNintendoLogin(it) },
         loadPercentage = loadPercentage,
         toggleSelection = { viewModel.toggleSelection(it) },
         clearSelection = { viewModel.clearSelection() }
@@ -190,6 +192,7 @@ fun GalleryScreenBody(
     saveSteamId: (String) -> Unit,
     saveEpicId: (String) -> Unit,
     saveAmazonLogin: (String, String) -> Unit,
+    saveNintendoLogin: (String) -> Unit,
     loadPercentage: Float,
     toggleSelection: (Long) -> Unit,
     clearSelection: () -> Unit = {}
@@ -290,6 +293,9 @@ fun GalleryScreenBody(
                     }
                     "Amazon" -> {
                         AmazonOverlay(onDismiss, saveAmazonLogin)
+                    }
+                    "Nintendo" -> {
+                        NintendoOverlay(onDismiss, saveNintendoLogin)
                     }
                 }
             }
@@ -1185,6 +1191,7 @@ private fun GalleryPreview() {
         saveSteamId = {},
         saveEpicId = {},
         saveAmazonLogin = { _, _ -> },
+        saveNintendoLogin = {},
         loadPercentage = -1f,
         toggleSelection = {}
     )

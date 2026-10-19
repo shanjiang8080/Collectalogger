@@ -49,6 +49,9 @@ data class Game(
     // Amazon-specific id (the entitlement product id)
     @ColumnInfo(name = "amazonId", defaultValue = "")
     val amazonId: String = "",
+    // Nintendo-specific id (the Virtual Game Card application id)
+    @ColumnInfo(name = "nintendoId", defaultValue = "")
+    val nintendoId: String = "",
     // List of IGDB screenshot URLs
     @ColumnInfo(name = "screenshots", defaultValue = "")
     val screenshots: List<String> = listOf(),

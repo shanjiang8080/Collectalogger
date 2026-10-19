@@ -53,6 +53,8 @@ private val seasonRegex = Regex("""\bSeason\s+\S+""", RegexOption.IGNORE_CASE)
 private suspend fun searchIGDBOnce(search: String, limit: Int): List<Game> {
     // escape double quotes, since the search phrase is enclosed in quotes in the request
     val searchPhrase = search.replace("\"", "\\\"")
+    // Mods flood the results for popular searches, hiding the real games,
+    // so game_type = 5 (Mod) is excluded
     val request = """
         search "$searchPhrase";
         fields
@@ -65,6 +67,7 @@ private suspend fun searchIGDBOnce(search: String, limit: Int): List<Game> {
         involved_companies.developer,
         involved_companies.publisher,
         first_release_date;
+        where game_type != 5;
         limit $limit;
     """.trimIndent()
     val response = IGDBSource.makeAPICall(

@@ -21,6 +21,7 @@ import com.example.collectalogger2.ui.overlays.AmazonOverlay
 import com.example.collectalogger2.ui.overlays.EpicOverlay
 import com.example.collectalogger2.ui.overlays.GogOverlay
 import com.example.collectalogger2.ui.overlays.ItchOverlay
+import com.example.collectalogger2.ui.overlays.NintendoOverlay
 import com.example.collectalogger2.ui.overlays.SteamOverlay
 
 // UPDATE WHEN ADDING LIBRARIES
@@ -33,6 +34,7 @@ fun SettingsScreen(
     val gogUsername by viewModel.gogUsername.collectAsStateWithLifecycle()
     val itchSecret by viewModel.itchSecret.collectAsStateWithLifecycle()
     val amazonInfo by viewModel.amazonInfo.collectAsStateWithLifecycle()
+    val nintendoCookies by viewModel.nintendoCookies.collectAsStateWithLifecycle()
     val activeStoreFront by viewModel.currentStoreFront.collectAsStateWithLifecycle()
 
     Column {
@@ -68,6 +70,11 @@ fun SettingsScreen(
                 R.string.settings_amazon_button_cd,
                 amazonInfo.isEmpty()
             ) { viewModel.setStoreFront("Amazon") }
+            GameLibraryButton(
+                R.drawable.logo_nsw,
+                R.string.settings_nintendo_button_cd,
+                nintendoCookies.isEmpty()
+            ) { viewModel.setStoreFront("Nintendo") }
         }
     }
     val onDismiss = { viewModel.setStoreFront("") }
@@ -91,6 +98,10 @@ fun SettingsScreen(
         "Amazon" -> AmazonOverlay(
             onDismiss = onDismiss,
             saveAmazonLogin = { code, verifier -> viewModel.saveAmazonInfo(code, verifier) }
+        )
+        "Nintendo" -> NintendoOverlay(
+            onDismiss = onDismiss,
+            saveNintendoLogin = { cookies -> viewModel.saveNintendoLogin(cookies) }
         )
         else -> {}
 

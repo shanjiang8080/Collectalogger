@@ -32,6 +32,7 @@ class SettingsViewModelTest {
         every { mockRepository.gogUsername } returns flowOf("initial_gog")
         every { mockRepository.itchSecret } returns flowOf("initial_itch")
         every { mockRepository.amazonIdInfo } returns flowOf("initial_amazon")
+        every { mockRepository.nintendoCookies } returns flowOf("initial_nintendo")
 
         viewModel = SettingsViewModel(mockRepository)
     }
@@ -52,6 +53,9 @@ class SettingsViewModelTest {
         }
         viewModel.amazonInfo.test {
             assertEquals("initial_amazon", awaitItem())
+        }
+        viewModel.nintendoCookies.test {
+            assertEquals("initial_nintendo", awaitItem())
         }
     }
 
@@ -122,6 +126,18 @@ class SettingsViewModelTest {
         viewModel.saveAmazonInfo(testCode, testVerifier)
 
         coVerify { getAmazonLogin(testCode, testVerifier, mockRepository) }
+        unmockkStatic("com.example.collectalogger2.ui.settings.LibraryLogInsKt")
+    }
+
+    @Test
+    fun `saveNintendoLogin calls getNintendoLogin`() = runTest {
+        mockkStatic("com.example.collectalogger2.ui.settings.LibraryLogInsKt")
+        coEvery { getNintendoLogin(any(), any()) } returns Unit
+
+        val testCookies = """{"https://accounts.nintendo.com": "cookie=1"}"""
+        viewModel.saveNintendoLogin(testCookies)
+
+        coVerify { getNintendoLogin(testCookies, mockRepository) }
         unmockkStatic("com.example.collectalogger2.ui.settings.LibraryLogInsKt")
     }
 }

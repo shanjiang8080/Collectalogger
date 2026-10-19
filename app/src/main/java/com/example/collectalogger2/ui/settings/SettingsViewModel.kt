@@ -20,12 +20,14 @@ class SettingsViewModel(val settingsRepository: SettingsRepository) : ViewModel(
     private val _gogUsername = MutableStateFlow("")
     private val _itchSecret = MutableStateFlow("")
     private val _amazonInfo = MutableStateFlow("")
+    private val _nintendoCookies = MutableStateFlow("")
     val currentStoreFront = _currentStoreFront.asStateFlow()
     val steamId = _steamId.asStateFlow()
     val epicInfo = _epicInfo.asStateFlow()
     val gogUsername = _gogUsername.asStateFlow()
     val itchSecret = _itchSecret.asStateFlow()
     val amazonInfo = _amazonInfo.asStateFlow()
+    val nintendoCookies = _nintendoCookies.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -34,6 +36,7 @@ class SettingsViewModel(val settingsRepository: SettingsRepository) : ViewModel(
             _gogUsername.value = settingsRepository.gogUsername.first()
             _itchSecret.value = settingsRepository.itchSecret.first()
             _amazonInfo.value = settingsRepository.amazonIdInfo.first()
+            _nintendoCookies.value = settingsRepository.nintendoCookies.first()
             Log.i("steamid_open", steamId.value)
             Log.i("epicinfo_open", epicInfo.value)
             Log.i("gogusername_open", gogUsername.value)
@@ -57,6 +60,10 @@ class SettingsViewModel(val settingsRepository: SettingsRepository) : ViewModel(
             settingsRepository.amazonIdInfo.collect { id ->
                 _amazonInfo.value = id
                 Log.i("amazoninfo", id)
+            }
+            settingsRepository.nintendoCookies.collect { cookies ->
+                _nintendoCookies.value = cookies
+                Log.i("nintendocookies", cookies)
             }
         }
     }
@@ -101,6 +108,15 @@ class SettingsViewModel(val settingsRepository: SettingsRepository) : ViewModel(
     fun saveAmazonInfo(code: String, codeVerifier: String) {
         viewModelScope.launch(Dispatchers.IO) {
             getAmazonLogin(code, codeVerifier, settingsRepository)
+        }
+    }
+
+    /**
+     * Saves the Nintendo portal cookies captured by the login overlay.
+     */
+    fun saveNintendoLogin(cookies: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            getNintendoLogin(cookies, settingsRepository)
         }
     }
 

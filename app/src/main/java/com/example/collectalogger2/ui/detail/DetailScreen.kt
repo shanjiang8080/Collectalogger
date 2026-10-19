@@ -78,6 +78,7 @@ import com.example.collectalogger2.data.datasource.AmazonGamesDataSource
 import com.example.collectalogger2.data.datasource.EpicDataSource
 import com.example.collectalogger2.data.datasource.GogDataSource
 import com.example.collectalogger2.data.datasource.ItchDataSource
+import com.example.collectalogger2.data.datasource.NintendoDataSource
 import com.example.collectalogger2.data.datasource.SteamDataSource
 import com.example.collectalogger2.ui.shared.BackgroundArt
 import com.example.collectalogger2.ui.shared.CoverArt
@@ -589,6 +590,28 @@ private fun PlatformsOwnedBar(game: Game) {
                             modifier = Modifier.size(24.dp),
                             tint = MaterialTheme.colorScheme.secondary
                         )
+                    }
+                    if (NintendoDataSource.name in game.source) {
+                        // Display a Nintendo Switch icon when owned on Switch.
+                        // Games with no Switch platform yet (e.g. pending an
+                        // import update) default to the Switch icon
+                        if (!("Switch 2" in game.platform) || "Switch" in game.platform) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.logo_nsw),
+                                contentDescription = stringResource(R.string.detail_nintendo_logo_cd),
+                                modifier = Modifier.size(24.dp),
+                                tint = MaterialTheme.colorScheme.secondary
+                            )
+                        }
+                        // Display a Nintendo Switch 2 icon when owned on Switch 2
+                        if ("Switch 2" in game.platform) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.logo_ns2),
+                                contentDescription = stringResource(R.string.detail_nintendo_switch2_logo_cd),
+                                modifier = Modifier.size(width = 45.dp, height = 24.dp),
+                                tint = MaterialTheme.colorScheme.secondary
+                            )
+                        }
                     }
                 }
 

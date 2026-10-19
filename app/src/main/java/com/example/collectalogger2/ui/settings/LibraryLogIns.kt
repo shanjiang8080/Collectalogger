@@ -70,6 +70,16 @@ suspend fun getAmazonLogin(code: String, codeVerifier: String, settingsRepositor
     }
 }
 
+suspend fun getNintendoLogin(cookies: String, settingsRepository: SettingsRepository) {
+    try {
+        // The cookies were captured straight from the login WebView
+        settingsRepository.saveNintendoCookies(cookies)
+        Log.i("Nintendo login info saved!", cookies)
+    } catch (ex: Exception) {
+        Log.e("Failed to save Nintendo login info!", ex.message ?: "")
+    }
+}
+
 /**
  * This function takes in a URL like https://steamcommunity.com/id/personnotman/
  * and converts it to the steamID.

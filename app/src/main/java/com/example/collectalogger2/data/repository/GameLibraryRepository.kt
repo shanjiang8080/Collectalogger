@@ -219,6 +219,7 @@ class GameLibraryRepository(
         gogId = gogId.ifEmpty { other.gogId },
         itchId = itchId.ifEmpty { other.itchId },
         amazonId = amazonId.ifEmpty { other.amazonId },
+        nintendoId = nintendoId.ifEmpty { other.nintendoId },
     )
 
     fun getGamesBySearchTerm(search: String, limit: Int = 0): List<Game> =

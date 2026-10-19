@@ -7,6 +7,7 @@ import com.example.collectalogger2.data.datasource.EpicDataSource
 import com.example.collectalogger2.data.datasource.GogDataSource
 import com.example.collectalogger2.data.datasource.ItchDataSource
 import com.example.collectalogger2.data.datasource.LocalDataSource
+import com.example.collectalogger2.data.datasource.NintendoDataSource
 import com.example.collectalogger2.data.datasource.RemoteLibraryDataSource
 import com.example.collectalogger2.data.datasource.SteamDataSource
 import com.example.collectalogger2.data.repository.GameLibraryRepository
@@ -70,6 +71,13 @@ class AppDataContainer(private val context: Context) : AppContainer {
                     AmazonGamesDataSource(
                         userInfoFlow = settingsRepository.amazonIdInfo,
                         userInfoSetter = { str -> settingsRepository.saveAmazonIdInfo(str) },
+                        gameDao = gameDao
+                    )
+                )
+                .plus(
+                    NintendoDataSource(
+                        userInfoFlow = settingsRepository.nintendoCookies,
+                        userInfoSetter = { str -> settingsRepository.saveNintendoCookies(str) },
                         gameDao = gameDao
                     )
                 )

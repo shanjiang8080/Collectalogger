@@ -145,6 +145,7 @@ dependencies {
     testImplementation(libs.turbine) // Highly recommended for testing StateFlows
     testImplementation(libs.mockk) // For mocking repositories/datasources
     testImplementation(libs.slf4j.simple)
+    testImplementation(libs.org.json) // Real org.json implementation for unit tests
 
 }
 
