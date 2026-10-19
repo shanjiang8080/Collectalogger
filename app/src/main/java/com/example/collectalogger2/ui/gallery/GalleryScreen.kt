@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -39,6 +40,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenuItem
@@ -48,6 +50,7 @@ import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -66,6 +69,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -82,22 +86,31 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.collectalogger2.R
 import com.example.collectalogger2.data.Game
-import com.example.collectalogger2.data.Genre
 import com.example.collectalogger2.ui.overlays.AmazonOverlay
+import com.example.collectalogger2.ui.overlays.NintendoOverlay
 import com.example.collectalogger2.ui.overlays.EpicOverlay
 import com.example.collectalogger2.ui.overlays.SteamOverlay
 import com.example.collectalogger2.ui.shared.CoverArt
 import com.example.collectalogger2.util.Filter
+import com.example.collectalogger2.util.Genre
 import com.example.collectalogger2.util.LocalNavEventBus
+import com.example.collectalogger2.util.PlayStatus
+import com.example.collectalogger2.util.Sort
+import com.example.collectalogger2.util.SortBy
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
@@ -115,7 +128,7 @@ fun GalleryScreen(
     val listState = rememberSaveable(saver = LazyGridState.Saver) {
         LazyGridState()
     }
-    val allGenres by viewModel.allGameGenres.collectAsStateWithLifecycle()
+    val allGenres = viewModel.allGameGenres
     val loadPercentage by viewModel.loadPercentage.collectAsStateWithLifecycle()
 
     // Go back to the top
@@ -139,6 +152,7 @@ fun GalleryScreen(
         uiState = uiState,
         allGenres = allGenres,
         onUpdateFilter = { viewModel.updateFilter(it) },
+        onUpdateSort = { viewModel.updateSort(it) },
         onNavigateToDetail = onNavigateToDetail,
         onReviewNonImported = onReviewNonImported,
         getSearchedGamesList = { viewModel.getSearchedGamesList(it) },
@@ -152,6 +166,9 @@ fun GalleryScreen(
         saveSteamId = { viewModel.saveSteamId(it) },
         saveEpicId = { viewModel.saveEpicInfo(it) },
         saveAmazonLogin = { code, verifier -> viewModel.saveAmazonInfo(code, verifier) },
+        saveNintendoLogin = { cookies, code, verifier ->
+            viewModel.saveNintendoLogin(cookies, code, verifier)
+        },
         loadPercentage = loadPercentage,
         toggleSelection = { viewModel.toggleSelection(it) },
         clearSelection = { viewModel.clearSelection() }
@@ -167,6 +184,7 @@ fun GalleryScreenBody(
     textFieldState: TextFieldState,
     uiState: GalleryUiState,
     onUpdateFilter: (Filter) -> Unit,
+    onUpdateSort: (Sort) -> Unit,
     onNavigateToDetail: (Long) -> Unit,
     onReviewNonImported: () -> Unit,
     getSearchedGamesList: (String) -> List<Game>,
@@ -176,6 +194,7 @@ fun GalleryScreenBody(
     saveSteamId: (String) -> Unit,
     saveEpicId: (String) -> Unit,
     saveAmazonLogin: (String, String) -> Unit,
+    saveNintendoLogin: (String, String, String) -> Unit,
     loadPercentage: Float,
     toggleSelection: (Long) -> Unit,
     clearSelection: () -> Unit = {}
@@ -185,8 +204,17 @@ fun GalleryScreenBody(
 
     var favoritesChecked by remember { mutableStateOf(uiState.filter?.isFavorite == true) }
     var sortMenuBoxState by remember { mutableStateOf(false) }
+    var sortAscending by remember { mutableStateOf(uiState.sort?.ascending ?: false) }
+    var collapsedSections by remember { mutableStateOf(setOf<String>()) }
     var genreMenuBoxState by remember { mutableStateOf(false) }
     var selectedGenreState by remember { mutableStateOf<Genre?>(null) }
+    var sourceMenuBoxState by remember { mutableStateOf(false) }
+    var platformMenuBoxState by remember { mutableStateOf(false) }
+    var playStatusMenuBoxState by remember { mutableStateOf(false) }
+    // add more when more filters get added
+    val hasFiltersApplied = favoritesChecked || uiState.filter?.genre != null ||
+            uiState.filter?.library != null || uiState.filter?.platform != null ||
+            uiState.filter?.playStatus != null
     val snackbarHostState = remember { SnackbarHostState() }
 
     // UI states
@@ -202,6 +230,7 @@ fun GalleryScreenBody(
 
 
     // Dunno where to put this
+    val resources = LocalResources.current
     LaunchedEffect(Unit) {
         uiEvents.collect { event ->
             when (event) {
@@ -210,7 +239,7 @@ fun GalleryScreenBody(
                 }
                 is UiEvent.ShowError -> {
                     snackbarHostState.showSnackbar(
-                        message = event.message
+                        message = event.message.resolve(resources)
                     )
                 }
                 is UiEvent.ShowSnackbar -> {
@@ -225,7 +254,7 @@ fun GalleryScreenBody(
                             duration = SnackbarDuration.Short
                         }
                         is SnackbarActionType.NonImportedGames -> {
-                            actionLabel = "Review"
+                            actionLabel = resources.getString(R.string.review)
                             withDismissAction = true
                             duration = SnackbarDuration.Indefinite
                             performedAction = onReviewNonImported
@@ -233,7 +262,7 @@ fun GalleryScreenBody(
                     }
 
                     val result = snackbarHostState.showSnackbar(
-                        message = event.message,
+                        message = event.message.resolve(resources),
                         actionLabel = actionLabel,
                         withDismissAction = withDismissAction,
                         duration = duration
@@ -267,6 +296,9 @@ fun GalleryScreenBody(
                     "Amazon" -> {
                         AmazonOverlay(onDismiss, saveAmazonLogin)
                     }
+                    "Nintendo" -> {
+                        NintendoOverlay(onDismiss, saveNintendoLogin)
+                    }
                 }
             }
         }
@@ -278,14 +310,15 @@ fun GalleryScreenBody(
             if (isSelectionMode) {
                 TopAppBar(
                     title = {
-                        Text("${uiState.selectedIds.size} selected")
+                        val selectedCount = uiState.selectedIds.size
+                        Text(pluralStringResource(R.plurals.gallery_selected_count, selectedCount, selectedCount))
                     },
                     modifier = Modifier,
                     navigationIcon = {
                         IconButton(onClick = clearSelection) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Clear Selection"
+                                contentDescription = stringResource(R.string.gallery_clear_selection_cd)
                             )
                         }
                     },
@@ -303,8 +336,7 @@ fun GalleryScreenBody(
                     getSearchedGamesList = getSearchedGamesList,
                     onNavigateToDetail = onNavigateToDetail,
                     onClickFilterButton = { showFilterSheet = true },
-                    // add more when more filters get added
-                    hasFiltersApplied = favoritesChecked,
+                    hasFiltersApplied = hasFiltersApplied,
                     searchBarState = searchBarState,
                     scrollBehavior = searchScrollBehavior
                 )
@@ -334,18 +366,43 @@ fun GalleryScreenBody(
             state = listState,
             contentPadding = PaddingValues(top = innerPadding.calculateTopPadding())
         ) {
-            if (uiState.filter != null) {
-                items(uiState.filter.getFilteredItems(uiState.games)) {
-                    GalleryGame(
-                        game = it,
-                        onNavigateToDetail = onNavigateToDetail,
-                        isSelectionMode = isSelectionMode,
-                        isSelected = it.id in uiState.selectedIds,
-                        toggleSelection = toggleSelection
-                    )
+            val filteredGames =
+                uiState.filter?.getFilteredItems(uiState.games) ?: uiState.games
+            if (uiState.sort?.grouped == true) {
+                uiState.sort.getSortedSections(filteredGames).forEach { section ->
+                    val isCollapsed = section.header in collapsedSections
+                    item(
+                        key = "section_${section.header}",
+                        span = { GridItemSpan(maxLineSpan) }
+                    ) {
+                        SortSectionHeader(
+                            title = section.header,
+                            collapsed = isCollapsed,
+                            onToggle = {
+                                collapsedSections = if (isCollapsed) {
+                                    collapsedSections - section.header
+                                } else {
+                                    collapsedSections + section.header
+                                }
+                            }
+                        )
+                    }
+                    if (!isCollapsed) {
+                        items(section.games) { game ->
+                            GalleryGame(
+                                game = game,
+                                onNavigateToDetail = onNavigateToDetail,
+                                isSelectionMode = isSelectionMode,
+                                isSelected = game.id in uiState.selectedIds,
+                                toggleSelection = toggleSelection
+                            )
+                        }
+                    }
                 }
             } else {
-                items(uiState.games) {
+                val displayGames =
+                    uiState.sort?.getSortedItems(filteredGames) ?: filteredGames
+                items(displayGames) {
                     GalleryGame(
                         game = it,
                         onNavigateToDetail = onNavigateToDetail,
@@ -362,7 +419,7 @@ fun GalleryScreenBody(
                 onDismissRequest = { showFilterSheet = false }
             ) {
                 Column {
-                    // have a row for sorts...
+                    // sorting subheading
                     Row(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
@@ -371,17 +428,158 @@ fun GalleryScreenBody(
                             .fillMaxWidth()
                     ) {
                         Text(
-                            text = "Sort by",
+                            text = stringResource(R.string.gallery_sort_title),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
                         )
+                    }
+                    // have a row for the sort-by dropdown and the ascending/descending toggle
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth()
+                    ) {
                         ExposedDropdownMenuBox(
                             expanded = sortMenuBoxState,
-                            onExpandedChange = { sortMenuBoxState = it },
-                            modifier = Modifier,
+                            onExpandedChange = { sortMenuBoxState = !sortMenuBoxState },
+                            modifier = Modifier.weight(1f)
                         ) {
-                            // nothing yet TODO implement sort by
+                            val selectedSort = uiState.sort?.criteria
+                            TextField(
+                                readOnly = true,
+                                value = when (selectedSort) {
+                                    SortBy.NAME -> stringResource(R.string.gallery_sort_name)
+                                    SortBy.PLATFORM -> stringResource(R.string.gallery_sort_platform)
+                                    SortBy.RELEASED -> stringResource(R.string.gallery_sort_release_date)
+                                    null -> stringResource(R.string.gallery_select_sort)
+                                },
+                                onValueChange = { },
+                                label = { Text(stringResource(R.string.gallery_sort_by)) },
+                                trailingIcon = {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(
+                                        expanded = sortMenuBoxState
+                                    )
+                                },
+                                colors = ExposedDropdownMenuDefaults.textFieldColors(),
+                                modifier = Modifier
+                                    .menuAnchor(
+                                        ExposedDropdownMenuAnchorType.PrimaryNotEditable,
+                                        true
+                                    )
+                                    .fillMaxWidth()
+                            )
+                            ExposedDropdownMenu(
+                                expanded = sortMenuBoxState,
+                                onDismissRequest = { sortMenuBoxState = false },
+                            ) {
+                                SortBy.entries.forEach { criteria ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                when (criteria) {
+                                                    SortBy.NAME -> stringResource(R.string.gallery_sort_name)
+                                                    SortBy.PLATFORM -> stringResource(R.string.gallery_sort_platform)
+                                                    SortBy.RELEASED -> stringResource(R.string.gallery_sort_release_date)
+                                                }
+                                            )
+                                        },
+                                        onClick = {
+                                            sortMenuBoxState = false
+                                            onUpdateSort(
+                                                Sort(
+                                                    criteria,
+                                                    sortAscending,
+                                                    uiState.sort?.grouped ?: false
+                                                )
+                                            )
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+                        }
+                        val sortArrowRotation by animateFloatAsState(
+                            targetValue = if (sortAscending) 0f else 180f,
+                            animationSpec = tween(durationMillis = 200),
+                            label = "SortArrowRotation"
+                        )
+                        IconButton(
+                            onClick = {
+                                sortAscending = !sortAscending
+                                onUpdateSort(
+                                    (uiState.sort ?: Sort(SortBy.NAME, sortAscending))
+                                        .copy(ascending = sortAscending)
+                                )
+                            },
+                            modifier = Modifier.padding(start = 8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowUp,
+                                contentDescription = if (sortAscending)
+                                    stringResource(R.string.gallery_sort_ascending_cd)
+                                else stringResource(R.string.gallery_sort_descending_cd),
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.rotate(sortArrowRotation)
+                            )
                         }
                     }
+                    // have a row for grouping the sorted items into collapsible sections
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth()
+                    ) {
+                        Text(
+                            text = stringResource(R.string.gallery_group_into_sections),
+                        )
+                        Switch(
+                            checked = uiState.sort?.grouped == true,
+                            onCheckedChange = {
+                                val currentSort = uiState.sort
+                                    ?: Sort(SortBy.RELEASED, sortAscending)
+                                onUpdateSort(currentSort.copy(grouped = it))
+                            }
+                        )
+                    }
 
+                    // filters subheading (genre selector below is also a filter)
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth()
+                    ) {
+                        Text(
+                            text = stringResource(R.string.gallery_filters_title),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        TextButton(
+                            onClick = {
+                                favoritesChecked = false
+                                selectedGenreState = null
+                                onUpdateFilter(
+                                    Filter(
+                                        library = null,
+                                        platform = null,
+                                        genre = null,
+                                        developer = null,
+                                        publisher = null,
+                                        isFavorite = null,
+                                        playStatus = null
+                                    )
+                                )
+                            },
+                            enabled = hasFiltersApplied
+                        ) {
+                            Text(stringResource(R.string.gallery_reset_filters))
+                        }
+                    }
                     // have a row for filters by favorites
                     Row(
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -391,7 +589,7 @@ fun GalleryScreenBody(
                             .fillMaxWidth()
                     ) {
                         Text(
-                            text = "Favorites only",
+                            text = stringResource(R.string.gallery_favorites_only),
                         )
                         Switch(
                             checked = favoritesChecked,
@@ -401,7 +599,7 @@ fun GalleryScreenBody(
                             }
                         )
                     }
-                    // have a row for filters by genre
+                    // have a row for filters by genre, with sort-by next to it
                     Row(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
@@ -409,29 +607,30 @@ fun GalleryScreenBody(
                             .padding(16.dp)
                             .fillMaxWidth()
                     ) {
-                        Text(
-                            text = "Sort by",
-                        )
                         ExposedDropdownMenuBox(
                             expanded = genreMenuBoxState,
                             onExpandedChange = { genreMenuBoxState = !genreMenuBoxState },
-                        ) {
-                            TextField(
-                                readOnly = true,
-                                value = selectedGenreState?.name ?: "Select genre",
-                                onValueChange = { },
-                                label = { Text("Genre") },
-                                trailingIcon = {
-                                    ExposedDropdownMenuDefaults.TrailingIcon(
-                                        expanded = genreMenuBoxState
-                                    )
-                                },
-                                colors = ExposedDropdownMenuDefaults.textFieldColors(),
-                                modifier = Modifier.menuAnchor(
-                                    ExposedDropdownMenuAnchorType.PrimaryNotEditable,
-                                    true
+                            modifier = Modifier.weight(1f)
+                            ) {
+                                TextField(
+                                    readOnly = true,
+                                    value = selectedGenreState?.let { stringResource(it.nameRes) }
+                                        ?: stringResource(R.string.gallery_select_genre),
+                                    onValueChange = { },
+                                    label = { Text(stringResource(R.string.gallery_genre)) },
+                                    trailingIcon = {
+                                        ExposedDropdownMenuDefaults.TrailingIcon(
+                                            expanded = genreMenuBoxState
+                                        )
+                                    },
+                                    colors = ExposedDropdownMenuDefaults.textFieldColors(),
+                                    modifier = Modifier
+                                        .menuAnchor(
+                                            ExposedDropdownMenuAnchorType.PrimaryNotEditable,
+                                            true
+                                        )
+                                        .fillMaxWidth()
                                 )
-                            )
                             ExposedDropdownMenu(
                                 expanded = genreMenuBoxState,
                                 onDismissRequest = { genreMenuBoxState = false },
@@ -444,7 +643,7 @@ fun GalleryScreenBody(
                                     LazyColumn {
                                         item {
                                             DropdownMenuItem(
-                                                text = { Text("No filters") },
+                                                text = { Text(stringResource(R.string.gallery_no_filters)) },
                                                 onClick = {
                                                     selectedGenreState = null
                                                     genreMenuBoxState = false
@@ -455,7 +654,7 @@ fun GalleryScreenBody(
                                         items(count = allGenres.size) { num ->
                                             val genre = allGenres[num]
                                             DropdownMenuItem(
-                                                text = { Text(genre.name) },
+                                                text = { Text(stringResource(genre.nameRes)) },
                                                 onClick = {
                                                     selectedGenreState = genre
                                                     genreMenuBoxState = false
@@ -476,7 +675,200 @@ fun GalleryScreenBody(
                         }
                     }
 
-                    // have a row for filters by library
+                    // have a row for filters by source (library)
+                    val allSources = uiState.games.flatMap { it.source }.distinct().sorted()
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth()
+                    ) {
+                        ExposedDropdownMenuBox(
+                            expanded = sourceMenuBoxState,
+                            onExpandedChange = { sourceMenuBoxState = !sourceMenuBoxState },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            val selectedSource = uiState.filter?.library?.firstOrNull()
+                            TextField(
+                                readOnly = true,
+                                value = selectedSource
+                                    ?: stringResource(R.string.gallery_all_sources),
+                                onValueChange = { },
+                                label = { Text(stringResource(R.string.gallery_source)) },
+                                trailingIcon = {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(
+                                        expanded = sourceMenuBoxState
+                                    )
+                                },
+                                colors = ExposedDropdownMenuDefaults.textFieldColors(),
+                                modifier = Modifier
+                                    .menuAnchor(
+                                        ExposedDropdownMenuAnchorType.PrimaryNotEditable,
+                                        true
+                                    )
+                                    .fillMaxWidth()
+                            )
+                            ExposedDropdownMenu(
+                                expanded = sourceMenuBoxState,
+                                onDismissRequest = { sourceMenuBoxState = false },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.gallery_all_sources)) },
+                                    onClick = {
+                                        sourceMenuBoxState = false
+                                        onUpdateFilter(uiState.filter!!.copy(library = null))
+                                    }
+                                )
+                                allSources.forEach { source ->
+                                    DropdownMenuItem(
+                                        text = { Text(source) },
+                                        onClick = {
+                                            sourceMenuBoxState = false
+                                            onUpdateFilter(
+                                                uiState.filter!!.copy(
+                                                    library = listOf(source)
+                                                )
+                                            )
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // have a row for filters by platform
+                    val allPlatforms = uiState.games.flatMap { it.platform }.distinct().sorted()
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth()
+                    ) {
+                        ExposedDropdownMenuBox(
+                            expanded = platformMenuBoxState,
+                            onExpandedChange = { platformMenuBoxState = !platformMenuBoxState },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            val selectedPlatform = uiState.filter?.platform?.firstOrNull()
+                            TextField(
+                                readOnly = true,
+                                value = selectedPlatform
+                                    ?: stringResource(R.string.gallery_all_platforms),
+                                onValueChange = { },
+                                label = { Text(stringResource(R.string.gallery_platform)) },
+                                trailingIcon = {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(
+                                        expanded = platformMenuBoxState
+                                    )
+                                },
+                                colors = ExposedDropdownMenuDefaults.textFieldColors(),
+                                modifier = Modifier
+                                    .menuAnchor(
+                                        ExposedDropdownMenuAnchorType.PrimaryNotEditable,
+                                        true
+                                    )
+                                    .fillMaxWidth()
+                            )
+                            ExposedDropdownMenu(
+                                expanded = platformMenuBoxState,
+                                onDismissRequest = { platformMenuBoxState = false },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.gallery_all_platforms)) },
+                                    onClick = {
+                                        platformMenuBoxState = false
+                                        onUpdateFilter(uiState.filter!!.copy(platform = null))
+                                    }
+                                )
+                                allPlatforms.forEach { platform ->
+                                    DropdownMenuItem(
+                                        text = { Text(platform) },
+                                        onClick = {
+                                            platformMenuBoxState = false
+                                            onUpdateFilter(
+                                                uiState.filter!!.copy(
+                                                    platform = listOf(platform)
+                                                )
+                                            )
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // have a row for filters by play status
+                    val allPlayStatuses = PlayStatus.all
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth()
+                    ) {
+                        ExposedDropdownMenuBox(
+                            expanded = playStatusMenuBoxState,
+                            onExpandedChange = { playStatusMenuBoxState = !playStatusMenuBoxState },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            val selectedPlayStatus = uiState.filter?.playStatus
+                            TextField(
+                                readOnly = true,
+                                value = selectedPlayStatus
+                                    ?.let { PlayStatus.displayResOf(it)?.let { res -> stringResource(res) } }
+                                    ?: stringResource(R.string.gallery_all_play_statuses),
+                                onValueChange = { },
+                                label = { Text(stringResource(R.string.gallery_play_status)) },
+                                trailingIcon = {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(
+                                        expanded = playStatusMenuBoxState
+                                    )
+                                },
+                                colors = ExposedDropdownMenuDefaults.textFieldColors(),
+                                modifier = Modifier
+                                    .menuAnchor(
+                                        ExposedDropdownMenuAnchorType.PrimaryNotEditable,
+                                        true
+                                    )
+                                    .fillMaxWidth()
+                            )
+                            ExposedDropdownMenu(
+                                expanded = playStatusMenuBoxState,
+                                onDismissRequest = { playStatusMenuBoxState = false },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.gallery_all_play_statuses)) },
+                                    onClick = {
+                                        playStatusMenuBoxState = false
+                                        onUpdateFilter(uiState.filter!!.copy(playStatus = null))
+                                    }
+                                )
+                                allPlayStatuses.forEach { status ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                PlayStatus.displayResOf(status)
+                                                    ?.let { stringResource(it) } ?: status
+                                            )
+                                        },
+                                        onClick = {
+                                            playStatusMenuBoxState = false
+                                            onUpdateFilter(
+                                                uiState.filter!!.copy(
+                                                    playStatus = status
+                                                )
+                                            )
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -515,7 +907,7 @@ fun NeoSearchBar(
                 },
                 expanded = searchBarState.currentValue == SearchBarValue.Expanded,
                 leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = "Search button")
+                    Icon(Icons.Default.Search, contentDescription = stringResource(R.string.gallery_search_button_cd))
                 },
                 trailingIcon = {
                     Row {
@@ -540,7 +932,7 @@ fun NeoSearchBar(
                         }
                     }
                 },
-                placeholder = { Text("Search your library") }
+                placeholder = { Text(stringResource(R.string.gallery_search_library)) }
             )
         }
 
@@ -586,6 +978,46 @@ fun NeoSearchBar(
 
 
 @Composable
+fun SortSectionHeader(
+    title: String,
+    collapsed: Boolean,
+    onToggle: () -> Unit
+) {
+    val arrowRotation by animateFloatAsState(
+        targetValue = if (collapsed) 0f else 180f,
+        animationSpec = tween(durationMillis = 200),
+        label = "SectionArrowRotation"
+    )
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onToggle() }
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        HorizontalDivider(
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 8.dp)
+        )
+        IconButton(onClick = onToggle) {
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowUp,
+                contentDescription = if (collapsed) stringResource(R.string.gallery_expand_section_cd)
+            else stringResource(R.string.gallery_collapse_section_cd),
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.rotate(arrowRotation)
+            )
+        }
+    }
+}
+
+@Composable
 fun FilterButton(
     hasFilters: Boolean,
     openFilter: () -> Unit
@@ -595,13 +1027,13 @@ fun FilterButton(
             Icon(
                 painter = painterResource(id = R.drawable.mic_filter_filled),
                 tint = MaterialTheme.colorScheme.primary,
-                contentDescription = "Favorite button (filled)"
+                contentDescription = stringResource(R.string.gallery_filter_button_filled_cd)
             )
         } else {
             Icon(
                 painter = painterResource(id = R.drawable.mic_filter_unfilled),
                 tint = MaterialTheme.colorScheme.onSurface,
-                contentDescription = "Favorite button (unfilled)"
+                contentDescription = stringResource(R.string.gallery_filter_button_unfilled_cd)
             )
         }
     }
@@ -612,7 +1044,7 @@ fun SearchClearButton(clearFilter: () -> Unit) {
     IconButton(onClick = clearFilter) {
         Icon(
             imageVector = Icons.Default.Clear,
-            contentDescription = "Clear search query",
+            contentDescription = stringResource(R.string.gallery_clear_search_cd),
             tint = MaterialTheme.colorScheme.onSurface
         )
     }
@@ -626,7 +1058,7 @@ fun FloatingRefreshButton(onClick: () -> Unit, loading: Boolean) {
             containerColor = MaterialTheme.colorScheme.secondaryContainer,
             contentColor = MaterialTheme.colorScheme.secondary,
         ) {
-            Icon(Icons.Filled.Refresh, "Update games button.")
+            Icon(Icons.Filled.Refresh, stringResource(R.string.gallery_update_games_cd))
         }
     } else {
         FloatingActionButton(
@@ -634,7 +1066,7 @@ fun FloatingRefreshButton(onClick: () -> Unit, loading: Boolean) {
             containerColor = MaterialTheme.colorScheme.surfaceDim,
             contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         ) {
-            Icon(Icons.Filled.Refresh, "Update games button (disabled).")
+            Icon(Icons.Filled.Refresh, stringResource(R.string.gallery_update_games_disabled_cd))
         }
     }
 }
@@ -724,7 +1156,7 @@ private fun GalleryGame(
             if (isSelected && checkboxScale > 0.5f) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "Selected",
+                    contentDescription = stringResource(R.string.gallery_selected_cd),
                     tint = Color.White,
                     modifier = Modifier.size(16.dp)
                 )
@@ -751,6 +1183,7 @@ private fun GalleryPreview() {
         textFieldState = TextFieldState(),
         uiState = uiState,
         onUpdateFilter = {},
+        onUpdateSort = {},
         onNavigateToDetail = {},
         onReviewNonImported = {},
         getSearchedGamesList = { return@GalleryScreenBody listOf() },
@@ -760,6 +1193,7 @@ private fun GalleryPreview() {
         saveSteamId = {},
         saveEpicId = {},
         saveAmazonLogin = { _, _ -> },
+        saveNintendoLogin = { _, _, _ -> },
         loadPercentage = -1f,
         toggleSelection = {}
     )

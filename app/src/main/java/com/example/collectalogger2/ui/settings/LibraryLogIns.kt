@@ -5,6 +5,7 @@ import com.example.collectalogger2.data.repository.SettingsRepository
 import com.example.collectalogger2.util.APIException
 import com.example.collectalogger2.util.libraryObjects.AmazonSource
 import com.example.collectalogger2.util.libraryObjects.EpicSource
+import com.example.collectalogger2.util.libraryObjects.NintendoSource
 import com.example.collectalogger2.util.libraryObjects.SteamSource
 import org.json.JSONObject
 
@@ -67,6 +68,20 @@ suspend fun getAmazonLogin(code: String, codeVerifier: String, settingsRepositor
         Log.i("Amazon login info saved!", response.toString())
     } catch (ex: Exception) {
         Log.e("Failed to save Amazon Games info!", ex.message ?: "")
+    }
+}
+
+suspend fun getNintendoLogin(cookies: String, sessionTokenCode: String, codeVerifier: String, settingsRepository: SettingsRepository) {
+    try {
+        // Exchange the session token code from the login redirect for a
+        // session token (the cookies were captured straight from the WebView)
+        val sessionToken = if (sessionTokenCode == "") ""
+            else NintendoSource.getSessionToken(sessionTokenCode, codeVerifier)
+        settingsRepository.saveNintendoSessionToken(sessionToken)
+        settingsRepository.saveNintendoCookies(cookies)
+        Log.i("Nintendo login info saved!", cookies)
+    } catch (ex: Exception) {
+        Log.e("Failed to save Nintendo login info!", ex.message ?: "")
     }
 }
 

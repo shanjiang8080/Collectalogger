@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,8 +16,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -30,8 +34,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.collectalogger2.R
 import com.example.collectalogger2.data.Game
 
 // Screen listing the games that failed to automatically import,
@@ -51,13 +58,13 @@ fun NonImportedScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text("Non-Imported Games")
+                    Text(stringResource(R.string.non_imported_title))
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.back)
                         )
                     }
                 }
@@ -71,7 +78,7 @@ fun NonImportedScreen(
                     .padding(innerPadding),
                 contentAlignment = Alignment.Center
             ) {
-                Text("No non-imported games")
+                Text(stringResource(R.string.non_imported_none))
             }
         } else {
             LazyColumn(
@@ -82,18 +89,12 @@ fun NonImportedScreen(
                 // Action buttons, sticking to the top of the list while scrolling
                 stickyHeader(key = "actions") {
                     Surface(color = MaterialTheme.colorScheme.background) {
-                        Row(
+                        FlowRow(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Button(
-                                onClick = { viewModel.ignoreSelected() },
-                                enabled = uiState.selectedKeys.isNotEmpty()
-                            ) {
-                                Text("Ignore")
-                            }
                             Button(
                                 onClick = { viewModel.openSearchDialog() },
                                 enabled = uiState.selectedKeys.isNotEmpty()
@@ -103,7 +104,31 @@ fun NonImportedScreen(
                                     contentDescription = null
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Search IGDB")
+                                Text(stringResource(R.string.non_imported_search_igdb))
+                            }
+                            Button(
+                                onClick = { viewModel.importSelectedWithoutIgdb() },
+                                enabled = uiState.selectedKeys.isNotEmpty(),
+                                colors = ButtonDefaults.filledTonalButtonColors()
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = null
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(stringResource(R.string.non_imported_import_manually))
+                            }
+                            Button(
+                                onClick = { viewModel.ignoreSelected() },
+                                enabled = uiState.selectedKeys.isNotEmpty(),
+                                colors = ButtonDefaults.filledTonalButtonColors()
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = null
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(stringResource(R.string.non_imported_ignore))
                             }
                         }
                     }
@@ -121,7 +146,9 @@ fun NonImportedScreen(
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Text(
-                                text = "${games.size} not imported",
+                                text = pluralStringResource(
+                                    R.plurals.non_imported_count, games.size, games.size
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -144,6 +171,7 @@ fun NonImportedScreen(
         SearchIgdbDialog(
             uiState = uiState,
             onChooseResult = { key, igdbGame -> viewModel.chooseIgdbResult(key, igdbGame) },
+            onSearchCustomTerm = { key, searchTerm -> viewModel.searchWithCustomTerm(key, searchTerm) },
             onConfirm = { viewModel.confirmSearchDialog() },
             onDismiss = { viewModel.dismissSearchDialog() }
         )

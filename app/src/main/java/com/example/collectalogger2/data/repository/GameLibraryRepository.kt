@@ -1,14 +1,12 @@
 package com.example.collectalogger2.data.repository
 
 import android.util.Log
+import com.example.collectalogger2.R
 import com.example.collectalogger2.data.Game
 import com.example.collectalogger2.data.GameDao
-import com.example.collectalogger2.data.Genre
-import com.example.collectalogger2.data.GenreDao
 import com.example.collectalogger2.data.ImportIgnoredResult
 import com.example.collectalogger2.data.ImportIgnoredResultDao
 import com.example.collectalogger2.data.datasource.GameEvent
-import com.example.collectalogger2.data.datasource.GenreDataSource
 import com.example.collectalogger2.data.datasource.LocalDataSource
 import com.example.collectalogger2.data.datasource.RemoteLibraryDataSource
 import com.example.collectalogger2.data.datasource.searchIGDB
@@ -22,6 +20,7 @@ import com.example.collectalogger2.util.APIStatusException
 import com.example.collectalogger2.util.AccountException
 import com.example.collectalogger2.util.AccountExpiryException
 import com.example.collectalogger2.util.PlayStatus
+import com.example.collectalogger2.util.UiText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -35,26 +34,27 @@ import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
 
-// These events can be observed in the eventFlow
+// These events can be observed in the eventFlow.
+// Messages are UiText wrappers around string resources so the UI layer can
+// resolve them localized; ViewModels never resolve resources themselves.
 sealed class RepositoryEvent {
     data class ShowMissingGames(val gameMap: MutableMap<String, List<Game>>) : RepositoryEvent()
-    data class ShowErrorMessage(val message: String, val errorMessage: String) : RepositoryEvent()
+    data class ShowErrorMessage(
+        val message: UiText,
+        // Additional, non-localizable detail (e.g. the raw exception message)
+        val detail: String? = null
+    ) : RepositoryEvent()
     data class ShowLoggedOut(val dataSource: RemoteLibraryDataSource) : RepositoryEvent()
-    data class ShowInfoMessage(val message: String) : RepositoryEvent()
+    data class ShowInfoMessage(val message: UiText) : RepositoryEvent()
     object ShowLoadingFinished : RepositoryEvent()
 }
 
 class GameLibraryRepository(
     private val remoteLibraryDataSources: List<RemoteLibraryDataSource>,
     private val localDataSource: LocalDataSource?,
-    private val genreDataSource: GenreDataSource,
     private val gameDao: GameDao,
-    private val genreDao: GenreDao,
     private val importIgnoredResultDao: ImportIgnoredResultDao,
 ) {
-
-    private var _genreFlow = MutableStateFlow<List<Genre>>(emptyList())
-    var genreFlow: StateFlow<List<Genre>> = _genreFlow.asStateFlow()
 
     // The library games the user chose to ignore; they are excluded from future imports
     private var _ignoredResults = MutableStateFlow<List<ImportIgnoredResult>>(emptyList())
@@ -74,47 +74,11 @@ class GameLibraryRepository(
 
     init {
         CoroutineScope(Dispatchers.IO).launch {
-            genreDao.getAllGenresFlow().collect {
-                _genreFlow.value = it
-                if (_genreFlow.value.isEmpty()) {
-                    genreDataSource.getGenres().forEach { genre ->
-                        genreDao.insert(genre)
-                        Log.i("GameLibraryRepository", "Genre inserted: ${genre.name}")
-                    }
-                }
-            }
-        }
-        CoroutineScope(Dispatchers.IO).launch {
             importIgnoredResultDao.getAllIgnoredResultsFlow().collect {
                 _ignoredResults.value = it
             }
         }
     }
-
-
-    fun getGenreByIGDBId(id: Int): Genre? {
-        // search through the list
-        val filteredGenreList = genreFlow.value.filter { genre ->
-            return@filter genre.igdbId == id
-        }
-        return if (filteredGenreList.isEmpty()) null
-        else filteredGenreList[0]
-    }
-
-    fun getGenreById(id: Int): Genre? {
-        // search through the list
-        val filteredGenreList = genreFlow.value.filter { genre ->
-            return@filter genre.id == id
-        }
-        return if (filteredGenreList.isEmpty()) null
-        else filteredGenreList[0]
-    }
-
-    suspend fun insertGenre(genre: Genre) = genreDao.insert(genre)
-
-    suspend fun deleteGenre(genre: Genre) = genreDao.delete(genre)
-
-    suspend fun updateGenre(genre: Genre) = genreDao.update(genre)
 
     fun getAllGamesStream(): Flow<List<Game>> = gameDao.getAllGamesStream()
 
@@ -162,7 +126,8 @@ class GameLibraryRepository(
             var newGame = existingGame.copy(
                 playTime = maxOf(existingGame.playTime, missingGame.playTime),
                 source = existingGame.source.plus(library),
-                platform = existingGame.platform.plus(platform)
+                platform = existingGame.platform.plus(platform),
+                releaseDate = if (igdbGame.releaseDate != 0L) igdbGame.releaseDate else existingGame.releaseDate
             )
             newGame = newGame.withStoreIdsFrom(missingGame)
             if (newGame.status.isEmpty()) {
@@ -197,15 +162,64 @@ class GameLibraryRepository(
     }
 
     /**
+     * Imports a non-imported game without binding it to an IGDB game, importing
+     * only the store-specific data (store ID, playtime). If a game without IGDB
+     * data (igdbId = -1) with the same title already exists, it is merged into
+     * instead of creating a duplicate.
+     */
+    suspend fun importNonImportedGameWithoutIgdb(library: String, missingGame: Game) {
+        val platform = missingGame.platform.ifEmpty { setOf("PC") }
+        val existingGame = gameDao.getGameByTitleWithoutIgdb(missingGame.title)
+        if (existingGame != null) {
+            var newGame = existingGame.copy(
+                playTime = maxOf(existingGame.playTime, missingGame.playTime),
+                source = existingGame.source.plus(library),
+                platform = existingGame.platform.plus(platform)
+            )
+            newGame = newGame.withStoreIdsFrom(missingGame)
+            if (newGame.status.isEmpty()) {
+                newGame = if (newGame.playTime > 0) {
+                    newGame.copy(status = PlayStatus.Played)
+                } else {
+                    newGame.copy(status = PlayStatus.Unplayed)
+                }
+            }
+            updateGame(newGame)
+            Log.i(
+                "Game merged!",
+                "{title: ${newGame.title}, igdbId: ${newGame.igdbId}, id: ${newGame.id}}"
+            )
+        } else {
+            var newGame = missingGame.copy(
+                igdbId = -1,
+                playTime = missingGame.playTime,
+                platform = platform,
+                source = setOf(library)
+            )
+            newGame = if (newGame.playTime > 0) {
+                newGame.copy(status = PlayStatus.Played)
+            } else {
+                newGame.copy(status = PlayStatus.Unplayed)
+            }
+            insertGame(newGame)
+            Log.i(
+                "Non-imported game imported without IGDB!",
+                "{title: ${newGame.title}, id: ${newGame.id}}"
+            )
+        }
+    }
+
+    /**
      * Copies the store-specific IDs of [other] into this game,
      * for the stores this game has none yet.
      */
     private fun Game.withStoreIdsFrom(other: Game): Game = copy(
         steamId = if (steamId != -1L) steamId else other.steamId,
-        epicId = if (epicId.isNotEmpty()) epicId else other.epicId,
-        gogId = if (gogId.isNotEmpty()) gogId else other.gogId,
-        itchId = if (itchId.isNotEmpty()) itchId else other.itchId,
-        amazonId = if (amazonId.isNotEmpty()) amazonId else other.amazonId,
+        epicId = epicId.ifEmpty { other.epicId },
+        gogId = gogId.ifEmpty { other.gogId },
+        itchId = itchId.ifEmpty { other.itchId },
+        amazonId = amazonId.ifEmpty { other.amazonId },
+        nintendoId = nintendoId.ifEmpty { other.nintendoId },
     )
 
     fun getGamesBySearchTerm(search: String, limit: Int = 0): List<Game> =
@@ -255,7 +269,8 @@ class GameLibraryRepository(
                                         var newGame = existingGame.copy(
                                             playTime = highestPlaytime,
                                             source = existingGame.source.plus(game.source),
-                                            platform = existingGame.platform.plus(game.platform)
+                                            platform = existingGame.platform.plus(game.platform),
+                                            releaseDate = if (game.releaseDate != 0L) game.releaseDate else existingGame.releaseDate
                                         )
                                         // Copy the game Id
                                         newGame = dataSource.copyWithID(newGame, game)
@@ -339,15 +354,15 @@ class GameLibraryRepository(
                         Log.e("APIStatusException happened with HTTP code ${e.statusCode}", e.message ?: "")
                         _eventFlow.emit(
                             ShowErrorMessage(
-                                "APIStatusException: HTTP Error ${e.statusCode}",
-                                e.message ?: ""
+                                UiText.Res(R.string.error_api_status, listOf(e.statusCode)),
+                                e.message
                             )
                         )
                     } else if (e is APIException) {
                         Log.e("APIException happened", e.message ?: "")
                         _eventFlow.emit(
                             ShowErrorMessage(
-                                "APIException", e.message ?: ""
+                                UiText.Res(R.string.error_api), detail = e.message
                             )
                         )
                     } else if (e is AccountExpiryException) {
@@ -378,7 +393,7 @@ class GameLibraryRepository(
         if (missingGamesMap.isNotEmpty()) {
             _eventFlow.emit(ShowMissingGames(missingGamesMap))
         } else if (newGames != 0) { // Don't tell if nothing happens
-            _eventFlow.emit(ShowInfoMessage("Imported $newGames new games"))
+            _eventFlow.emit(ShowInfoMessage(UiText.Plural(R.plurals.imported_new_games, newGames)))
         }
         _eventFlow.emit(ShowLoadingFinished)
         _loadPercentage.value = -1f

@@ -3,12 +3,13 @@ package com.example.collectalogger2.ui.detail
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.example.collectalogger2.MainDispatcherRule
+import com.example.collectalogger2.R
 import com.example.collectalogger2.data.Game
-import com.example.collectalogger2.data.Genre
 import com.example.collectalogger2.data.repository.GameLibraryRepository
+import com.example.collectalogger2.util.Genre
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -30,11 +31,10 @@ class DetailViewModelTest {
     fun setup() {
         // 1. Use MutableStateFlow to satisfy the StateFlow requirement
         // and explicitly define the List<Genre> type.
-        val mockGenreFlow = MutableStateFlow(emptyList<Genre>())
+        // (Genres are a static list now; the repository no longer exposes a genre flow.)
 
         // 2. Mock the repository to return these specific flows
         every { mockRepository.getGameStream(any()) } returns flowOf(null)
-        every { mockRepository.genreFlow } returns mockGenreFlow
 
         // Initialize the ViewModel
         viewModel = DetailViewModel(
@@ -58,30 +58,27 @@ class DetailViewModelTest {
     }
 
     @Test
-    fun `init loads game and fetches corresponding genres`() = runTest {
-        // 1. Prepare data
+    fun `init loads game and resolves genres from the static list`() = runTest {
+        // 1. Prepare data: genre 12 is a real IGDB genre (RPG), 999 is unknown
         val testGame =
-            Game(id = 1L, title = "Test Game", genre = setOf(10, 20))
-        val genre1 = Genre(id = 1, igdbId = 10, name = "RPG")
-        val genre2 = Genre(id = 2, igdbId = 20, name = "Action")
+            Game(id = 1L, title = "Test Game", genre = setOf(12, 999))
 
         // 2. Mock repository behavior
         every { mockRepository.getGameStream(1L) } returns flowOf(testGame)
-        every { mockRepository.getGenreByIGDBId(10) } returns genre1
-        every { mockRepository.getGenreByIGDBId(20) } returns genre2
 
         // 3. Re-initialize ViewModel to trigger init block with this data
         viewModel = DetailViewModel(mockRepository, SavedStateHandle(mapOf("id" to 1L)))
 
-        // 4. Verify StateFlows
+        // 4. Verify StateFlows — unknown ids are skipped
         viewModel.game.test {
             assertEquals("Test Game", awaitItem()?.title)
         }
-        viewModel.gameGenres.test {
-            val genres = awaitItem()
-            assertEquals(2, genres.size)
-            assertEquals("RPG", genres[0].name)
-        }
+        // The genres are resolved on Dispatchers.IO right after the game is set,
+        // so wait for that collector to have processed the game
+        val genres = viewModel.gameGenres.first { it.isNotEmpty() }
+        assertEquals(1, genres.size)
+        assertEquals(12, genres[0].igdbId)
+        assertEquals(R.string.genre_rpg, genres[0].nameRes)
     }
 
     @Test
@@ -108,7 +105,7 @@ class DetailViewModelTest {
         every { mockRepository.getGameStream(1L) } returns flowOf(testGame)
         viewModel = DetailViewModel(mockRepository, SavedStateHandle(mapOf("id" to 1L)))
 
-        val newGenres = listOf(Genre(id = 1, igdbId = 99, name = "Sci-Fi"))
+        val newGenres = listOf(Genre(igdbId = 99, nameRes = R.string.genre_indie))
 
         viewModel.onSubmitChanges(
             title = "New Title",

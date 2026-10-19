@@ -3,11 +3,13 @@ package com.example.collectalogger2.data.repository
 import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.collectalogger2.util.APIException
 import com.example.collectalogger2.util.libraryObjects.AmazonSource
 import com.example.collectalogger2.util.libraryObjects.EpicSource
+import com.example.collectalogger2.util.libraryObjects.NintendoSource
 import com.example.collectalogger2.util.libraryObjects.SteamSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -21,6 +23,9 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val GOG_USERNAME = stringPreferencesKey("gog_username")
         val ITCH_SECRET = stringPreferencesKey("itch_secret")
         val AMAZON_ID_INFO = stringPreferencesKey("amazon_id_info")
+        val NINTENDO_COOKIES = stringPreferencesKey("nintendo_cookies")
+        val NINTENDO_SESSION_TOKEN = stringPreferencesKey("nintendo_session_token")
+        val NINTENDO_IMPORT_PHYSICAL = booleanPreferencesKey("nintendo_import_physical")
     }
     val steamId: Flow<String> =
         dataStore.data.map { preferences ->
@@ -45,6 +50,40 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         dataStore.data.map { preferences ->
             preferences[AMAZON_ID_INFO] ?: ""
         }
+
+    // The Nintendo Account portal cookies, stored as a JSON object
+    // mapping base URLs to raw cookie header strings (see NintendoSource)
+    val nintendoCookies: Flow<String> =
+        dataStore.data.map { preferences ->
+            preferences[NINTENDO_COOKIES] ?: ""
+        }
+
+    // The Nintendo Store app play activity session token (valid ~2 years)
+    val nintendoSessionToken: Flow<String> =
+        dataStore.data.map { preferences ->
+            preferences[NINTENDO_SESSION_TOKEN] ?: ""
+        }
+
+    // Whether played titles not in the owned library (physical games) should
+    // also be imported with their playtime
+    val nintendoImportPhysical: Flow<Boolean> =
+        dataStore.data.map { preferences ->
+            preferences[NINTENDO_IMPORT_PHYSICAL] ?: false
+        }
+
+    suspend fun getNintendoLogin(cookies: String, sessionTokenCode: String, codeVerifier: String) {
+        try {
+            // Exchange the session token code from the login redirect for a
+            // session token (the cookies were captured straight from the WebView)
+            val sessionToken = if (sessionTokenCode == "") ""
+                else NintendoSource.getSessionToken(sessionTokenCode, codeVerifier)
+            saveNintendoSessionToken(sessionToken)
+            saveNintendoCookies(cookies)
+            Log.i("Nintendo login info saved!", cookies)
+        } catch (ex: Exception) {
+            Log.e("Failed to save Nintendo login info!", ex.message ?: "")
+        }
+    }
     suspend fun getSteamLogin(url: String) {
         val id: String
         try {
@@ -102,6 +141,18 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
 
     suspend fun saveAmazonIdInfo(info: String) {
         dataStore.edit { it[AMAZON_ID_INFO] = info }
+    }
+
+    suspend fun saveNintendoCookies(cookies: String) {
+        dataStore.edit { it[NINTENDO_COOKIES] = cookies }
+    }
+
+    suspend fun saveNintendoSessionToken(sessionToken: String) {
+        dataStore.edit { it[NINTENDO_SESSION_TOKEN] = sessionToken }
+    }
+
+    suspend fun saveNintendoImportPhysical(enabled: Boolean) {
+        dataStore.edit { it[NINTENDO_IMPORT_PHYSICAL] = enabled }
     }
 }
 

@@ -18,10 +18,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
+import com.example.collectalogger2.R
 
 private const val oAuthUrl =
     "https://itch.io/user/oauth?client_id=9c390053f3ea6f87367c0dfbbbad00f7&scope=profile:owned&redirect_uri=urn:ietf:wg:oauth:2.0:oob&response_type=token"
@@ -39,11 +41,10 @@ fun ItchOverlay(
             modifier = Modifier.padding(16.dp)
         ) {
             Text(
-                "Login with OAuth to Itch.io. " +
-                        "Once done, paste the resulting key into the text-box.",
+                stringResource(R.string.overlay_itch_instructions),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface
-            ) // TODO XML-ize this
+            )
             var itchSecret by remember { mutableStateOf("") }
             val ctx = LocalContext.current
             Button(
@@ -57,14 +58,14 @@ fun ItchOverlay(
                 colors = ButtonDefaults.buttonColors()
             ) {
                 Text(
-                    text = "Log in via OAuth",
+                    text = stringResource(R.string.overlay_log_in_via_oauth),
                     modifier = Modifier.padding(10.dp),
                 )
             }
             TextField(
                 value = itchSecret,
                 onValueChange = { itchSecret = it },
-                label = { Text("Itch OAuth Key") },
+                label = { Text(stringResource(R.string.overlay_itch_oauth_key)) },
                 placeholder = { Text("ABCDEF...") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
@@ -80,7 +81,7 @@ fun ItchOverlay(
                         onDismiss()
                     }
                 ) {
-                    Text("Save")
+                    Text(stringResource(R.string.save))
                 }
                 Button(
                     colors = ButtonDefaults.buttonColors(
@@ -90,7 +91,7 @@ fun ItchOverlay(
                     onClick = {
                         onDismiss()
                     }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
 
             }

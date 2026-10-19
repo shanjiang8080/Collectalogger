@@ -1,5 +1,6 @@
 package com.example.collectalogger2.ui.settings
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
@@ -10,8 +11,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.collectalogger2.R
@@ -19,7 +23,10 @@ import com.example.collectalogger2.ui.overlays.AmazonOverlay
 import com.example.collectalogger2.ui.overlays.EpicOverlay
 import com.example.collectalogger2.ui.overlays.GogOverlay
 import com.example.collectalogger2.ui.overlays.ItchOverlay
+import com.example.collectalogger2.ui.overlays.NintendoOverlay
 import com.example.collectalogger2.ui.overlays.SteamOverlay
+import com.example.collectalogger2.ui.shared.LibraryDialogOption
+import com.example.collectalogger2.ui.shared.LibraryOptionDialog
 
 // UPDATE WHEN ADDING LIBRARIES
 @Composable
@@ -31,11 +38,12 @@ fun SettingsScreen(
     val gogUsername by viewModel.gogUsername.collectAsStateWithLifecycle()
     val itchSecret by viewModel.itchSecret.collectAsStateWithLifecycle()
     val amazonInfo by viewModel.amazonInfo.collectAsStateWithLifecycle()
+    val nintendoCookies by viewModel.nintendoCookies.collectAsStateWithLifecycle()
     val activeStoreFront by viewModel.currentStoreFront.collectAsStateWithLifecycle()
 
     Column {
         Text(
-            text = "Log in to services:", // TODO make XML-ized
+            text = stringResource(R.string.settings_log_in_to_services),
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.onSurface
         )
@@ -43,32 +51,39 @@ fun SettingsScreen(
             // make buttons for each library, like Steam, Epic, etc.
             GameLibraryButton(
                 R.drawable.logo_steam,
-                "Steam button",
+                R.string.settings_steam_button_cd,
                 steamId.isEmpty()
             ) { viewModel.setStoreFront("Steam") }
             GameLibraryButton(
                 R.drawable.logo_egs,
-                "Epic Games button",
+                R.string.settings_epic_button_cd,
                 epicInfo.isEmpty()
             ) { viewModel.setStoreFront("Epic") }
             GameLibraryButton(
                 R.drawable.logo_gog,
-                "GOG button",
+                R.string.settings_gog_button_cd,
                 gogUsername.isEmpty()
             ) { viewModel.setStoreFront("GOG") }
             GameLibraryButton(
                 R.drawable.logo_itch,
-                "Itch button",
+                R.string.settings_itch_button_cd,
                 itchSecret.isEmpty()
             ) { viewModel.setStoreFront("Itch") }
             GameLibraryButton(
                 R.drawable.logo_amazon_games,
-                "Amazon button",
+                R.string.settings_amazon_button_cd,
                 amazonInfo.isEmpty()
             ) { viewModel.setStoreFront("Amazon") }
+            GameLibraryButton(
+                R.drawable.logo_nsw,
+                R.string.settings_nintendo_button_cd,
+                nintendoCookies.isEmpty()
+            ) { viewModel.setStoreFront("Nintendo") }
         }
     }
     val onDismiss = { viewModel.setStoreFront("") }
+    // Reset the pre-login option dialog whenever another store front is selected
+    val optionDialogAnswered = remember(activeStoreFront) { mutableStateOf(false) }
     when (activeStoreFront) {
         "Steam" -> SteamOverlay(
             onDismiss = onDismiss,
@@ -90,6 +105,38 @@ fun SettingsScreen(
             onDismiss = onDismiss,
             saveAmazonLogin = { code, verifier -> viewModel.saveAmazonInfo(code, verifier) }
         )
+        "Nintendo" -> {
+            // Ask about import options (physical games with playtime)
+            // before opening the login overlay; reusable for other libraries
+            if (optionDialogAnswered.value) {
+                NintendoOverlay(
+                    onDismiss = onDismiss,
+                    saveNintendoLogin = { cookies, code, verifier ->
+                        viewModel.saveNintendoLogin(cookies, code, verifier)
+                    }
+                )
+            } else {
+                LibraryOptionDialog(
+                    title = stringResource(R.string.settings_nintendo_dialog_title),
+                    text = stringResource(R.string.settings_nintendo_dialog_text),
+                    options = listOf(
+                        LibraryDialogOption(
+                            stringResource(R.string.settings_nintendo_dialog_yes)
+                        ) {
+                            viewModel.setNintendoImportPhysical(true)
+                            optionDialogAnswered.value = true
+                        },
+                        LibraryDialogOption(
+                            stringResource(R.string.settings_nintendo_dialog_no)
+                        ) {
+                            viewModel.setNintendoImportPhysical(false)
+                            optionDialogAnswered.value = true
+                        }
+                    ),
+                    onDismissRequest = onDismiss
+                )
+            }
+        }
         else -> {}
 
     }
@@ -99,7 +146,7 @@ fun SettingsScreen(
 @Composable
 fun GameLibraryButton(
     icon: Int,
-    description: String,
+    @StringRes descriptionRes: Int,
     isLoggedIn: Boolean,
     onClick: () -> Unit
 ) {
@@ -112,7 +159,7 @@ fun GameLibraryButton(
         ) {
             Icon(
                 painter = painterResource(icon),
-                contentDescription = description,
+                contentDescription = stringResource(descriptionRes),
             )
         }
     } else {
@@ -123,7 +170,7 @@ fun GameLibraryButton(
         ) {
             Icon(
                 painter = painterResource(icon),
-                contentDescription = description,
+                contentDescription = stringResource(descriptionRes),
             )
         }
 

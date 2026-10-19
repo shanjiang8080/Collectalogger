@@ -11,8 +11,9 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.example.collectalogger2.AppContainer
 import com.example.collectalogger2.data.Game
-import com.example.collectalogger2.data.Genre
 import com.example.collectalogger2.data.repository.GameLibraryRepository
+import com.example.collectalogger2.util.Genre
+import com.example.collectalogger2.util.Genres
 import com.example.collectalogger2.util.getExtensionFromUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,8 +33,8 @@ class DetailViewModel(
     private val _gameGenres = MutableStateFlow<List<Genre>>(emptyList())
     val gameGenres = _gameGenres.asStateFlow()
 
-    private val _allGameGenres = MutableStateFlow<List<Genre>>(emptyList())
-    val allGameGenres = _allGameGenres.asStateFlow()
+    // Genres are a static list (see util/Genres); no database lookup anymore
+    val allGameGenres: List<Genre> = Genres.all
     val currentDialog = _currentDialog.asStateFlow()
     val gameId: Long = checkNotNull(savedStateHandle["id"])
     init {
@@ -41,18 +42,14 @@ class DetailViewModel(
             gameLibraryRepository.getGameStream(gameId).collect { flowGame: Game? ->
                 if (flowGame != null) {
                     _game.value = flowGame
-                    var newGenres = mutableListOf<Genre>()
+                    val newGenres = mutableListOf<Genre>()
                     flowGame.genre.forEach { genreId ->
-                        var genre = gameLibraryRepository.getGenreByIGDBId(genreId)
+                        val genre = Genres.byId(genreId)
                         if (genre != null) newGenres.add(genre)
+                        else Log.w("DetailViewModel", "Unknown genre id $genreId on game ${flowGame.title}")
                     }
                     _gameGenres.value = newGenres.toList()
                 }
-            }
-        }
-        viewModelScope.launch(Dispatchers.IO) {
-            gameLibraryRepository.genreFlow.collect { genres ->
-                _allGameGenres.value = genres
             }
         }
     }

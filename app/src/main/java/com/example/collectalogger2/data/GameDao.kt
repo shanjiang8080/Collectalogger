@@ -41,6 +41,12 @@ interface GameDao {
     @Query("SELECT * FROM games WHERE amazonId = :amazonId")
     fun getGameByAmazonId(amazonId: String): Game?
 
+    @Query("SELECT * FROM games WHERE nintendoId = :nintendoId")
+    fun getGameByNintendoId(nintendoId: String): Game?
+
+    @Query("SELECT * FROM games WHERE igdbId = -1 AND title = :title LIMIT 1")
+    fun getGameByTitleWithoutIgdb(title: String): Game?
+
     @Query("SELECT * FROM games WHERE igdbId = :igdbId")
     fun getGameStreamByIGDBId(igdbId: Long): Flow<Game?>
 

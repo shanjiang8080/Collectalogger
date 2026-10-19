@@ -8,8 +8,8 @@ import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.example.collectalogger2.AppContainer
+import com.example.collectalogger2.R
 import com.example.collectalogger2.data.Game
-import com.example.collectalogger2.data.Genre
 import com.example.collectalogger2.data.repository.GameLibraryRepository
 import com.example.collectalogger2.data.repository.RepositoryEvent
 import com.example.collectalogger2.data.repository.SettingsRepository
@@ -20,8 +20,11 @@ import com.example.collectalogger2.ui.gallery.UiEvent.ShowDialog
 import com.example.collectalogger2.ui.gallery.UiEvent.ShowError
 import com.example.collectalogger2.ui.gallery.UiEvent.ShowSnackbar
 import com.example.collectalogger2.util.Filter
+import com.example.collectalogger2.util.Genre
+import com.example.collectalogger2.util.Genres
 import com.example.collectalogger2.util.Sort
 import com.example.collectalogger2.util.SortBy
+import com.example.collectalogger2.util.UiText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,7 +35,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class GalleryUiState( // TODO put the selected games into here
-    val sort: Sort? = Sort(SortBy.RELEASED, false), // TODO Sort is not implemented
+    val sort: Sort? = Sort(SortBy.NAME, true),
     val filter: Filter? = null,
     val games: List<Game> = emptyList(), // Stores games
     val selectedIds: Set<Long> = emptySet() // Stores game IDs
@@ -50,10 +53,12 @@ sealed class DialogActionType {
 // snackbars for informational/low priority stuff like retrying, errors, etc
 // also have one for missing games (but add the option for ignore lists in the future...)
 // dialogs for high priority (probably?) like logged out of epic games
+// Messages are UiText wrappers around string resources that the screen resolves
+// with the context, since ViewModels can't resolve resources.
 sealed class UiEvent {
-    data class ShowSnackbar(val message: String, val actionType: SnackbarActionType) : UiEvent()
-    data class ShowError(val message: String) : UiEvent()
-    data class ShowDialog(val message: String, val actionType: DialogActionType) : UiEvent()
+    data class ShowSnackbar(val message: UiText, val actionType: SnackbarActionType) : UiEvent()
+    data class ShowError(val message: UiText) : UiEvent()
+    data class ShowDialog(val message: UiText, val actionType: DialogActionType) : UiEvent()
     object LoadingFinished : UiEvent()
 }
 
@@ -72,8 +77,8 @@ class GalleryViewModel(
     private var _uiState = MutableStateFlow(GalleryUiState())
     val uiState: StateFlow<GalleryUiState> = _uiState.asStateFlow()
 
-    private val _allGameGenres = MutableStateFlow<List<Genre>>(emptyList())
-    val allGameGenres = _allGameGenres.asStateFlow()
+    // Genres are a static list (see util/Genres); no database lookup anymore
+    val allGameGenres: List<Genre> = Genres.all
 
     private val _uiEvents = MutableSharedFlow<UiEvent>()
     val uiEvents = _uiEvents.asSharedFlow()
@@ -110,19 +115,16 @@ class GalleryViewModel(
                 }
             }
         }
-        viewModelScope.launch(Dispatchers.IO) {
-            gameLibraryRepository.genreFlow.collect { genres ->
-                _allGameGenres.value = genres
-            }
-        }
-
         viewModelScope.launch(Dispatchers.Main) {
             gameLibraryRepository.eventFlow.collect { event ->
                 when (event) {
                     is RepositoryEvent.ShowLoggedOut -> {
                         _uiEvents.emit(
                             ShowDialog(
-                                "${event.dataSource.libraryName} session expired.",
+                                UiText.Res(
+                                    R.string.session_expired,
+                                    listOf(event.dataSource.libraryName)
+                                ),
                                 LoggedOut(event.dataSource.libraryName)
                             )
                         )
@@ -136,7 +138,7 @@ class GalleryViewModel(
                     is RepositoryEvent.ShowMissingGames -> {
                         _uiEvents.emit(
                             ShowSnackbar(
-                                "Some games failed to automatically import",
+                                UiText.Res(R.string.some_games_failed_import),
                                 NonImportedGames(event.gameMap)
                             )
                         )
@@ -211,6 +213,12 @@ class GalleryViewModel(
     fun saveAmazonInfo(code: String, codeVerifier: String) {
         viewModelScope.launch(Dispatchers.IO) {
             settingsRepository.getAmazonLogin(code, codeVerifier)
+        }
+    }
+
+    fun saveNintendoLogin(cookies: String, sessionTokenCode: String, codeVerifier: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            settingsRepository.getNintendoLogin(cookies, sessionTokenCode, codeVerifier)
         }
     }
 

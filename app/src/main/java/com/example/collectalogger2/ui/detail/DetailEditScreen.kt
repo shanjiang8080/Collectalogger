@@ -57,15 +57,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.collectalogger2.R
 import com.example.collectalogger2.data.Game
-import com.example.collectalogger2.data.Genre
 import com.example.collectalogger2.ui.shared.AnnotatedButton
 import com.example.collectalogger2.ui.shared.BackgroundArt
 import com.example.collectalogger2.ui.shared.CoverArt
+import com.example.collectalogger2.util.Genre
 import com.example.collectalogger2.util.PlayStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -81,7 +82,7 @@ fun DetailEditScreen(
     ) {
     val realGame by viewModel.game.collectAsStateWithLifecycle()
     val gameGenres by viewModel.gameGenres.collectAsStateWithLifecycle()
-    val allGameGenres by viewModel.allGameGenres.collectAsStateWithLifecycle()
+    val allGameGenres = viewModel.allGameGenres
 
     realGame?.let { game ->
         DetailEditScreenBody(
@@ -150,13 +151,13 @@ fun DetailEditScreenBody(
         topBar = {
             TopAppBar(
                 title = {
-                    Text("Edit")
+                    Text(stringResource(R.string.edit))
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.detail_edit_back_cd),
                             modifier = Modifier.height(48.dp)
                         )
                     }
@@ -215,7 +216,7 @@ fun DetailEditScreenBody(
                                 pickMedia.launch(PickVisualMediaRequest(PickVisualMedia.ImageOnly))
                             },
                             iconPainter = painterResource(id = R.drawable.mic_image),
-                            label = "Edit Cover",
+                            label = stringResource(R.string.detail_edit_cover),
                             colors = ButtonDefaults.filledTonalButtonColors()
                         )
                         FilledIconButton(
@@ -229,7 +230,7 @@ fun DetailEditScreenBody(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Clear,
-                                contentDescription = "Clear custom cover"
+                                contentDescription = stringResource(R.string.detail_edit_clear_custom_cover_cd)
                             )
                         }
                     }
@@ -247,12 +248,12 @@ fun DetailEditScreenBody(
                 ) {
                     Icon(
                         painter = painterResource(id = R.drawable.mic_title),
-                        contentDescription = "Title"
+                        contentDescription = stringResource(R.string.detail_edit_title_cd)
                     )
                     TextField(
                         value = titleState,
                         onValueChange = { titleState = it },
-                        label = { Text("Title") },
+                        label = { Text(stringResource(R.string.detail_edit_title)) },
                         textStyle = MaterialTheme.typography.headlineSmall.copy(color = MaterialTheme.colorScheme.onSurface),
                         modifier = Modifier
                             .widthIn(488.dp)
@@ -264,12 +265,12 @@ fun DetailEditScreenBody(
                 ) {
                     Icon(
                         painter = painterResource(id = R.drawable.mic_sortingname),
-                        contentDescription = "Sorting name"
+                        contentDescription = stringResource(R.string.detail_edit_sorting_name)
                     )
                     TextField(
                         value = sortingNameState,
                         onValueChange = { sortingNameState = it },
-                        label = { Text("Sorting Name") },
+                        label = { Text(stringResource(R.string.detail_edit_sorting_name)) },
                         modifier = Modifier
                             .widthIn(488.dp)
                     )
@@ -283,12 +284,12 @@ fun DetailEditScreenBody(
             ) {
                 Icon(
                     painter = painterResource(id = R.drawable.mic_info),
-                    contentDescription = "Description"
+                    contentDescription = stringResource(R.string.detail_description)
                 )
                 TextField(
                     value = descriptionState,
                     onValueChange = { descriptionState = it },
-                    label = { Text("Description") },
+                    label = { Text(stringResource(R.string.detail_description)) },
                     singleLine = false,
                     modifier = Modifier
                         .width(800.dp)
@@ -305,11 +306,11 @@ fun DetailEditScreenBody(
             ) {
                 Icon(
                     painter = painterResource(id = R.drawable.mic_developer),
-                    contentDescription = "Developer icon"
+                    contentDescription = stringResource(R.string.detail_developer_icon_cd)
                 )
                 SetItemCombo(
                     itemList = developerState,
-                    label = "Developer",
+                    label = stringResource(R.string.detail_edit_developer),
                     onValueChange = { developerState = it })
             }
 
@@ -321,11 +322,11 @@ fun DetailEditScreenBody(
             ) {
                 Icon(
                     painter = painterResource(id = R.drawable.mic_publisher),
-                    contentDescription = "Publisher icon"
+                    contentDescription = stringResource(R.string.detail_publisher_icon_cd)
                 )
                 SetItemCombo(
                     itemList = publisherState,
-                    label = "Publisher",
+                    label = stringResource(R.string.detail_edit_publisher),
                     onValueChange = { publisherState = it })
             }
 
@@ -350,7 +351,7 @@ fun DetailEditScreenBody(
                     )
                 },
                 iconPainter = painterResource(R.drawable.mic_save),
-                label = "Save"
+                label = stringResource(R.string.save)
             )
         }
     }
@@ -393,7 +394,7 @@ private fun SetItemCombo(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Clear,
-                            contentDescription = "Delete ${label.lowercase()}"
+                            contentDescription = stringResource(R.string.detail_edit_delete_field, label.lowercase())
                         )
                     }
                 }
@@ -409,9 +410,9 @@ private fun SetItemCombo(
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "Add ${label.lowercase()} icon"
+                    contentDescription = stringResource(R.string.detail_edit_add_field, label.lowercase())
                 )
-                Text("Add ${label.lowercase()}")
+                Text(stringResource(R.string.detail_edit_add_field, label.lowercase()))
             }
         }
 
@@ -433,8 +434,10 @@ private fun GenreChips(
     ) {
         Icon(
             painter = painterResource(id = R.drawable.mic_tag),
-            contentDescription = "Genre"
+            contentDescription = stringResource(R.string.detail_edit_genre_cd)
         )
+        // Resolve the genre names once so the search filter can compare text
+        val allGenresWithNames = allGenres.map { it to stringResource(it.nameRes) }
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
@@ -444,12 +447,12 @@ private fun GenreChips(
                         onClick = {
                             onValueChange(genres.minus(genre))
                         },
-                        label = { Text(genre.name) },
+                        label = { Text(stringResource(genre.nameRes)) },
                         selected = false,
                         trailingIcon = {
                             Icon(
                                 imageVector = Icons.Filled.Clear,
-                                contentDescription = "Clear genre"
+                                contentDescription = stringResource(R.string.detail_edit_clear_genre_cd)
                             )
                         }
                     )
@@ -468,12 +471,12 @@ private fun GenreChips(
                                     genreSearchState = listOf()
                                 }
                             },
-                            label = { Text(genre.name) },
+                            label = { Text(stringResource(genre.nameRes)) },
                             selected = true,
                             avatar = {
                                 Icon(
                                     imageVector = Icons.Default.Add,
-                                    contentDescription = "Add genre"
+                                    contentDescription = stringResource(R.string.detail_edit_add_genre_cd)
                                 )
                             }
                         )
@@ -485,13 +488,13 @@ private fun GenreChips(
                 value = genreBoxState,
                 onValueChange = {
                     genreBoxState = it
-                    genreSearchState = allGenres.filter { genre ->
-                        genre.name.lowercase().startsWith(it.lowercase())
-                    }
+                    genreSearchState = allGenresWithNames.filter { (_, name) ->
+                        name.lowercase().startsWith(it.lowercase())
+                    }.map { (genre, _) -> genre }
                 },
                 modifier = Modifier
                     .fillMaxWidth(),
-                label = { Text("Add genre") }
+                label = { Text(stringResource(R.string.detail_edit_add_genre)) }
             )
         }
     }
@@ -515,9 +518,9 @@ private fun DetailEditScreenPreview() {
         genre = setOf()
     )
     val gameGenres = listOf(
-        Genre("Indie", 0, 0),
-        Genre("RPG", 0, 0),
-        Genre("Simulation", 0, 0)
+        Genre(0, R.string.genre_indie),
+        Genre(12, R.string.genre_rpg),
+        Genre(13, R.string.genre_simulator)
     )
     DetailEditScreenBody(
         game, gameGenres, listOf(), {}, { _, _, _, _, _, _ -> }
@@ -545,9 +548,9 @@ private fun DetailEditScreenPreviewDiffScreen() {
         genre = setOf()
     )
     val gameGenres = listOf(
-        Genre("Indie", 0, 0),
-        Genre("RPG", 0, 0),
-        Genre("Simulation", 0, 0)
+        Genre(0, R.string.genre_indie),
+        Genre(12, R.string.genre_rpg),
+        Genre(13, R.string.genre_simulator)
     )
     DetailEditScreenBody(
         game, gameGenres, listOf(), {}, { _, _, _, _, _, _ -> }
@@ -558,8 +561,8 @@ private fun DetailEditScreenPreviewDiffScreen() {
 @Composable
 private fun GenreChipsPreview() {
     GenreChips(
-        genres = listOf(Genre("what"), Genre("how"), Genre("when")),
-        allGenres = listOf(Genre("what"), Genre("how"), Genre("when")),
+        genres = listOf(Genre(0, R.string.genre_indie), Genre(12, R.string.genre_rpg), Genre(13, R.string.genre_simulator)),
+        allGenres = listOf(Genre(0, R.string.genre_indie), Genre(12, R.string.genre_rpg), Genre(13, R.string.genre_simulator)),
         onValueChange = {},
         modifier = Modifier
     )
