@@ -295,6 +295,63 @@ class NintendoSourceTest {
         assertNull(NintendoSource.getNasLanguage("eo"))
     }
 
+    // --- parsePlayHistories / authorize URL ---
+
+    @Test
+    fun parsePlayHistories_extractsMinutesAndPlatforms() {
+        val body = """
+            {"playHistories": [
+                {"titleId": "0100cd801ce5e000", "titleName": "Balatro", "platform": "HAC",
+                 "totalPlayedDays": 22, "totalPlayedMinutes": 5861},
+                {"titleId": "040029202747a000", "titleName": "Balatro", "platform": "BEE",
+                 "totalPlayedMinutes": 1041},
+                {"titleId": "", "titleName": "No id", "platform": "HAC", "totalPlayedMinutes": 5}
+             ],
+             "hiddenTitleList": [],
+             "recentPlayHistories": []}
+        """.trimIndent()
+
+        val histories = NintendoSource.parsePlayHistories(body)
+        // Entries without a titleId are skipped
+        assertEquals(2, histories.size)
+        assertEquals("0100cd801ce5e000", histories[0].titleId)
+        assertEquals(5861, histories[0].minutes)
+        assertFalse(histories[0].isSwitch2)
+        assertEquals("040029202747a000", histories[1].titleId)
+        assertEquals(1041, histories[1].minutes)
+        assertTrue(histories[1].isSwitch2)
+    }
+
+    @Test
+    fun parsePlayHistories_handlesEmptyResponse() {
+        val histories = NintendoSource.parsePlayHistories("""{"playHistories": []}""")
+        assertEquals(0, histories.size)
+        assertEquals(0, NintendoSource.parsePlayHistories("""{}""").size)
+    }
+
+    @Test
+    fun getAuthorizeUrl_containsClientAndChallenge() {
+        val url = NintendoSource.getAuthorizeUrl("test_challenge")
+        assertTrue(url.startsWith("https://accounts.nintendo.com/connect/1.0.0/authorize"))
+        // The Nintendo Store app's client id and its custom scheme redirect
+        assertTrue(url.contains("client_id=5c38e31cd085304b"))
+        assertTrue(url.contains("redirect_uri=npf5c38e31cd085304b%3A%2F%2Fauth"))
+        assertTrue(url.contains("response_type=session_token_code"))
+        assertTrue(url.contains("session_token_code_challenge=test_challenge"))
+        assertTrue(url.contains("session_token_code_challenge_method=S256"))
+    }
+
+    @Test
+    fun codeChallenge_isSha256OfVerifier() {
+        val verifier = NintendoSource.generateCodeVerifier()
+        assertEquals(45, verifier.length)
+        // The challenge is a deterministic base64url SHA-256 of the verifier
+        assertEquals(
+            NintendoSource.getCodeChallenge(verifier),
+            NintendoSource.getCodeChallenge(verifier)
+        )
+    }
+
     // --- cleanTitle ---
 
     @Test

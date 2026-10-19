@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.collectalogger2.util.APIException
 import com.example.collectalogger2.util.libraryObjects.AmazonSource
 import com.example.collectalogger2.util.libraryObjects.EpicSource
+import com.example.collectalogger2.util.libraryObjects.NintendoSource
 import com.example.collectalogger2.util.libraryObjects.SteamSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -22,6 +23,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val ITCH_SECRET = stringPreferencesKey("itch_secret")
         val AMAZON_ID_INFO = stringPreferencesKey("amazon_id_info")
         val NINTENDO_COOKIES = stringPreferencesKey("nintendo_cookies")
+        val NINTENDO_SESSION_TOKEN = stringPreferencesKey("nintendo_session_token")
     }
     val steamId: Flow<String> =
         dataStore.data.map { preferences ->
@@ -54,8 +56,19 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             preferences[NINTENDO_COOKIES] ?: ""
         }
 
-    suspend fun getNintendoLogin(cookies: String) {
+    // The Nintendo Store app play activity session token (valid ~2 years)
+    val nintendoSessionToken: Flow<String> =
+        dataStore.data.map { preferences ->
+            preferences[NINTENDO_SESSION_TOKEN] ?: ""
+        }
+
+    suspend fun getNintendoLogin(cookies: String, sessionTokenCode: String, codeVerifier: String) {
         try {
+            // Exchange the session token code from the login redirect for a
+            // session token (the cookies were captured straight from the WebView)
+            val sessionToken = if (sessionTokenCode == "") ""
+                else NintendoSource.getSessionToken(sessionTokenCode, codeVerifier)
+            saveNintendoSessionToken(sessionToken)
             saveNintendoCookies(cookies)
             Log.i("Nintendo login info saved!", cookies)
         } catch (ex: Exception) {
@@ -123,6 +136,10 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
 
     suspend fun saveNintendoCookies(cookies: String) {
         dataStore.edit { it[NINTENDO_COOKIES] = cookies }
+    }
+
+    suspend fun saveNintendoSessionToken(sessionToken: String) {
+        dataStore.edit { it[NINTENDO_SESSION_TOKEN] = sessionToken }
     }
 }
 

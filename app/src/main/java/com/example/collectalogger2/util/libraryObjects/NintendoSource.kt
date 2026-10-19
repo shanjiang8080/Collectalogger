@@ -14,8 +14,11 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.net.URLEncoder
 
 /**
  * Thrown when the saved portal cookies are no longer valid (the portal page
@@ -61,8 +64,7 @@ object NintendoSource {
      */
     const val PORTAL_URL =
         "https://accounts.nintendo.com/portal/vgcs/?sort=activated_date&order=desc"
-    // The URL prefix that marks a successful login (used by the login overlay)
-    const val PORTAL_BASE_URL = "https://accounts.nintendo.com/portal/vgcs"
+
     // The Nintendo Account portal domain the cookies are captured from
     const val PORTAL_COOKIE_URL = "https://accounts.nintendo.com"
     const val USER_AGENT =
@@ -169,6 +171,223 @@ object NintendoSource {
     private fun isEnglishFallback(primary: String, candidate: String): Boolean {
         if (candidate != "en-GB" && candidate != "en-US") return false
         return primary != "en-GB" && primary != "en-US"
+    }
+
+    // --- Play activity (Nintendo Store app / znej API) ---
+    //
+    // The Virtual Game Cards portal provides the owned-game list but no
+    // playtime. The Nintendo Store app's play activity API does, with the
+    // complete history (titleId, firstPlayedAt, lastPlayedAt,
+    // totalPlayedDays, totalPlayedMinutes). Reverse-engineered from the app
+    // (com.nintendo.znej), see the spike in spikes/switch_playtime_spike.ps1:
+    //
+    // 1. The user logs in through the OAuth authorize endpoint with a PKCE
+    //    challenge; the "Select this account" button navigates to
+    //    npf<client id>://auth#session_token_code=... (intercepted by the
+    //    login overlay).
+    // 2. The session_token_code + verifier are exchanged for a
+    //    session_token, which is valid for about two years.
+    // 3. The session_token is exchanged for a 15-minute access_token, which
+    //    authorizes the play_histories GET request.
+
+    // The client id of the Nintendo Store app (com.nintendo.znej)
+    private const val ZNEJ_CLIENT_ID = "5c38e31cd085304b"
+    private const val ZNEJ_REDIRECT_URI = "npf$ZNEJ_CLIENT_ID://auth"
+    // User agent the Nintendo Store app uses for its API calls
+    private const val ZNEJ_USER_AGENT = "com.nintendo.znej/3.3.1 (Android/14)"
+
+    /**
+     * A play history entry from the Nintendo Store app play activity API.
+     * isSwitch2 comes from the entry's platform field ("HAC" is the Switch
+     * hardware, "BEE" the Switch 2).
+     */
+    data class NintendoPlaytime(
+        val titleId: String,
+        val name: String,
+        val minutes: Long,
+        val isSwitch2: Boolean
+    )
+
+    /**
+     * Generates a PKCE code verifier, a random string of 45 chars.
+     */
+    fun generateCodeVerifier(): String {
+        val randomStringChars = "ABCDEFGHIJKLMNOPQRSTYVWXZabcdefghijklmnopqrstyvwxz0123456789_"
+        val result = StringBuilder(45)
+        repeat(45) {
+            result.append(randomStringChars[kotlin.random.Random.nextInt(0, randomStringChars.length - 1)])
+        }
+        return result.toString()
+    }
+
+    /**
+     * Generates the S256 code challenge from the code verifier: the SHA-256
+     * hash of the verifier, base64url-encoded without padding.
+     */
+    fun getCodeChallenge(codeVerifier: String): String {
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+            .digest(codeVerifier.toByteArray(Charsets.UTF_8))
+        return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(digest)
+    }
+
+    /**
+     * The Nintendo Account login URL for the play activity API. The login
+     * overlay loads this in a WebView and intercepts the redirect to
+     * ZNEJ_REDIRECT_URI carrying the session_token_code.
+     */
+    fun getAuthorizeUrl(codeChallenge: String): String {
+        return "https://accounts.nintendo.com/connect/1.0.0/authorize" +
+            "?client_id=$ZNEJ_CLIENT_ID" +
+            "&redirect_uri=${URLEncoder.encode(ZNEJ_REDIRECT_URI, "UTF-8")}" +
+            "&response_type=session_token_code" +
+            "&scope=${URLEncoder.encode("openid user user.mii user.email user.links[].id", "UTF-8")}" +
+            "&session_token_code_challenge=$codeChallenge" +
+            "&session_token_code_challenge_method=S256" +
+            "&state=collectalogger" +
+            "&theme=login_form"
+    }
+
+    /**
+     * Exchanges the session_token_code captured from the login redirect
+     * (plus the code verifier used for the challenge) for a session_token,
+     * which is valid for about two years. Throws a
+     * NintendoSessionExpiredException when the code is invalid or expired.
+     */
+    suspend fun getSessionToken(sessionTokenCode: String, codeVerifier: String): String {
+        val body = "client_id=$ZNEJ_CLIENT_ID" +
+            "&session_token_code=${
+                withContext(Dispatchers.IO) {
+                    URLEncoder.encode(sessionTokenCode, "UTF-8")
+                }
+            }" +
+            "&session_token_code_verifier=${
+                withContext(Dispatchers.IO) {
+                    URLEncoder.encode(codeVerifier, "UTF-8")
+                }
+            }"
+        val responseText = try {
+            val response = client.post("https://accounts.nintendo.com/connect/1.0.0/api/session_token") {
+                header("User-Agent", ZNEJ_USER_AGENT)
+                header("Accept", "application/json")
+                contentType(ContentType.Application.FormUrlEncoded)
+                setBody(body)
+            }
+            if (!response.status.isSuccess()) {
+                val errorText = response.bodyAsText()
+                // A 400 means the session token code is invalid or expired
+                if (response.status.value == 400) {
+                    throw NintendoSessionExpiredException(
+                        "The Nintendo login code was rejected ($errorText); please log in again!"
+                    )
+                }
+                throw APIStatusException(
+                    "Nintendo session token exchange failed with HTTP status ${response.status.value}: $errorText",
+                    response.status.value
+                )
+            }
+            response.bodyAsText()
+        } catch (ex: APIException) {
+            throw ex
+        } catch (ex: Exception) {
+            Log.e(TAG, "Nintendo session token exchange failed!", ex)
+            throw APIException("Nintendo session token exchange failed: ${ex.message}")
+        }
+        return JSONObject(responseText).getString("session_token")
+    }
+
+    /**
+     * Fetches the account's complete play history with the given
+     * session_token (which gets exchanged for a short-lived access_token
+     * first). Throws a NintendoSessionExpiredException when the session
+     * token is no longer valid.
+     */
+    suspend fun getPlayHistories(sessionToken: String): List<NintendoPlaytime> {
+        // Exchange the session token for an access token
+        val tokenBody = JSONObject()
+            .put("client_id", ZNEJ_CLIENT_ID)
+            .put("session_token", sessionToken)
+            .put("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer-session-token")
+        val tokenResponseText = try {
+            val response = client.post("https://accounts.nintendo.com/connect/1.0.0/api/token") {
+                header("User-Agent", ZNEJ_USER_AGENT)
+                contentType(ContentType.Application.Json)
+                setBody(tokenBody.toString())
+            }
+            if (!response.status.isSuccess()) {
+                val errorText = response.bodyAsText()
+                // A 400 means the session token is invalid or expired
+                if (response.status.value == 400) {
+                    throw NintendoSessionExpiredException(
+                        "Cannot refresh the Nintendo play activity login! Must log in again to Nintendo!"
+                    )
+                }
+                throw APIStatusException(
+                    "Nintendo access token request failed with HTTP status ${response.status.value}: $errorText",
+                    response.status.value
+                )
+            }
+            response.bodyAsText()
+        } catch (ex: APIException) {
+            throw ex
+        } catch (ex: Exception) {
+            Log.e(TAG, "Nintendo access token request failed!", ex)
+            throw APIException("Nintendo access token request failed: ${ex.message}")
+        }
+        val accessToken = JSONObject(tokenResponseText).getString("access_token")
+
+        // Fetch the play histories
+        val responseText = try {
+            val response = client.get("https://app-api.znej.nintendo.com/api/v2.0/users/me/play_histories") {
+                header("User-Agent", ZNEJ_USER_AGENT)
+                header("Authorization", "Bearer $accessToken")
+                header("gentry-locale", "en-US")
+                header("Accept", "application/json")
+            }
+            if (!response.status.isSuccess()) {
+                val errorText = response.bodyAsText()
+                // 401/403 mean the access token was rejected (stale session)
+                if (response.status.value == 401 || response.status.value == 403) {
+                    throw NintendoSessionExpiredException(
+                        "Cannot access the Nintendo play activity! Must log in again to Nintendo!"
+                    )
+                }
+                throw APIStatusException(
+                    "Nintendo play histories request failed with HTTP status ${response.status.value}: $errorText",
+                    response.status.value
+                )
+            }
+            response.bodyAsText()
+        } catch (ex: APIException) {
+            throw ex
+        } catch (ex: Exception) {
+            Log.e(TAG, "Nintendo play histories request failed!", ex)
+            throw APIException("Nintendo play histories request failed: ${ex.message}")
+        }
+        return parsePlayHistories(responseText)
+    }
+
+    /**
+     * Parses the play_histories response into NintendoPlaytime entries.
+     */
+    fun parsePlayHistories(body: String): List<NintendoPlaytime> {
+        val root = JSONObject(body)
+        val historiesJson = root.optJSONArray("playHistories") ?: JSONArray()
+        val histories = mutableListOf<NintendoPlaytime>()
+        for (i in 0 until historiesJson.length()) {
+            val entry = historiesJson.getJSONObject(i)
+            val titleId = entry.optString("titleId", "")
+            if (titleId == "") continue
+            histories.add(
+                NintendoPlaytime(
+                    titleId = titleId,
+                    name = entry.optString("titleName", ""),
+                    minutes = entry.optLong("totalPlayedMinutes", 0),
+                    // "BEE" is the Switch 2; "HAC" (and anything else) the Switch
+                    isSwitch2 = entry.optString("platform", "") == "BEE"
+                )
+            )
+        }
+        return histories
     }
 
     /**
@@ -344,7 +563,7 @@ object NintendoSource {
                 .getJSONObject("account")
                 .getJSONObject("vgc")
                 .getJSONObject("vgcViews")
-        } catch (ex: Exception) {
+        } catch (_: Exception) {
             throw APIException("Nintendo returned an incomplete virtual game cards response!")
         }
         val viewsJson = vgcViews.optJSONArray("views") ?: JSONArray()
@@ -411,7 +630,7 @@ object NintendoSource {
                 .replace("&lt;", "<")
                 .replace("&gt;", ">")
             JSONObject(decoded)
-        } catch (ex: Exception) {
+        } catch (_: Exception) {
             Log.w(TAG, "Failed to parse the '$elementId' data-json blob of the Nintendo portal page!")
             null
         }

@@ -9,6 +9,7 @@ import com.example.collectalogger2.data.datasource.GameEvent.GameLoaded
 import com.example.collectalogger2.data.datasource.GameEvent.ListNonImportedGames
 import com.example.collectalogger2.util.AccountException
 import com.example.collectalogger2.util.AccountExpiryException
+import com.example.collectalogger2.util.APIException
 import com.example.collectalogger2.util.libraryObjects.NintendoSessionExpiredException
 import com.example.collectalogger2.util.libraryObjects.NintendoSource
 import kotlinx.coroutines.flow.Flow
@@ -16,12 +17,17 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 
 /**
- * Imports the user's Nintendo Switch (and Switch 2) games through the
- * Nintendo Account Virtual Game Cards portal, based on the flow of Playnite's
+ * Imports the user's Nintendo Switch (and Switch 2) games and playtimes
+ * through the Nintendo Account, based on the flow of Playnite's
  * NintendoLibrary extension (https://github.com/XenorPLxx/playnite-library-nintendo):
- * fetch the account's owned virtual game cards, then match them to IGDB games
- * by name. Nintendo provides no playtime through this surface, so playTime is
- * always 0.
+ *
+ * - The game library comes from the Virtual Game Cards portal (owned cards,
+ *   matched to IGDB games by name), like the Playnite plugin.
+ * - The playtime comes from the Nintendo Store app's play activity API
+ *   (complete per-title history in minutes), joined onto the imported games
+ *   by the title/application id. Only owned titles get playtime; demo and
+ *   non-game entries (YouTube, Twitch, ...) from the play history are
+ *   skipped since they are not in the VGC list.
  *
  * Coverage note: the portal lists virtual game cards, which digital purchases
  * issue automatically and physical cartridges get through Nintendo's VGC
@@ -29,7 +35,7 @@ import kotlinx.coroutines.flow.flow
  */
 class NintendoDataSource(
     var userInfoFlow: Flow<String>,
-    var userInfoSetter: suspend (String) -> Unit,
+    var sessionTokenFlow: Flow<String>,
     gameDao: GameDao
 ) : RemoteLibraryDataSource(gameDao) {
     override var libraryName: String = name
@@ -46,12 +52,19 @@ class NintendoDataSource(
         // Fetch all of the account's virtual game cards with the saved cookies
         val titles = try {
             NintendoSource.getVirtualGameCards(cookieInfo)
-        } catch (e: NintendoSessionExpiredException) {
+        } catch (_: NintendoSessionExpiredException) {
             throw AccountExpiryException(
                 "Cannot access Nintendo with the saved login! Must log in again to Nintendo!",
                 libraryName
             )
         }
+
+        // Fetch the play histories with the saved session token. Playtime is
+        // optional: if the fetch fails, the library import continues without
+        // playtime updates (only a stale token triggers a re-login, since a
+        // silent permanent degradation would be worse than one overlay)
+        val sessionToken = sessionTokenFlow.first()
+        val playtimes = fetchPlaytimes(sessionToken)
 
         // Skip add-on-only entries (DLC without a base game)
         val gamesToImport = titles.filterNot { NintendoSource.isAddOnOnly(it) }
@@ -68,6 +81,10 @@ class NintendoDataSource(
             idPlatformMap.putIfAbsent(title.applicationId, NintendoSource.platformsOf(title))
         }
 
+        // Map of titleId to playtime minutes; the play history's titleIds are
+        // the same title/application ids the virtual game cards use
+        val playtimeById = playtimes.associate { it.titleId to it.minutes }
+
         // Emit an expected games count for the loading bar
         emit(ExpectedGamesCount(idTitleMap.size))
 
@@ -76,7 +93,8 @@ class NintendoDataSource(
             val existingGame = gameDao.getGameByNintendoId(nintendoId)
             if (!forceUpdate && existingGame != null) {
                 val modifiedGame = existingGame.copy(
-                    platform = existingGame.platform.plus(idPlatformMap[nintendoId] ?: setOf("Switch"))
+                    platform = existingGame.platform.plus(idPlatformMap[nintendoId] ?: setOf("Switch")),
+                    playTime = maxOf(existingGame.playTime, playtimeById[nintendoId] ?: 0)
                 )
                 if (modifiedGame != existingGame)
                     emit(GameLoaded(modifiedGame))
@@ -95,6 +113,7 @@ class NintendoDataSource(
                 val existingGame = gamesByTitle[title.lowercase()] ?: continue
                 val modifiedGame = existingGame.copy(
                     platform = existingGame.platform.plus(idPlatformMap[nintendoId] ?: setOf("Switch")),
+                    playTime = maxOf(existingGame.playTime, playtimeById[nintendoId] ?: 0),
                     // only bind this card if the database game has no Nintendo id yet
                     nintendoId = if (existingGame.nintendoId == "") nintendoId else existingGame.nintendoId
                 )
@@ -114,7 +133,7 @@ class NintendoDataSource(
         }
         if (fallbackMap.isNotEmpty()) {
             Log.d("NintendoDataSource", "Making bulk IGDB call with names")
-            matchNames(fallbackMap, idPlatformMap).forEach { game ->
+            matchNames(fallbackMap, idPlatformMap, playtimeById).forEach { game ->
                 emit(GameLoaded(game))
                 idTitleMap.remove(game.nintendoId)
                 duplicateSet.add(game.igdbId)
@@ -133,7 +152,7 @@ class NintendoDataSource(
         }
         if (casingMap.isNotEmpty()) {
             Log.d("NintendoDataSource", "Making bulk IGDB call with title-cased names")
-            matchNames(casingMap, idPlatformMap).forEach { game ->
+            matchNames(casingMap, idPlatformMap, playtimeById).forEach { game ->
                 if (game.igdbId !in duplicateSet) {
                     emit(GameLoaded(game))
                     idTitleMap.remove(game.nintendoId)
@@ -145,14 +164,15 @@ class NintendoDataSource(
         // Emit a FinishGamesCount
         emit(FinishGamesCount)
 
-        // Emit non-imported games with their names, IDs and platforms
+        // Emit non-imported games with their names, IDs, platforms and playtime
         val newMissingGames = mutableListOf<Game>()
         idTitleMap.forEach { (nintendoId, title) ->
             newMissingGames.add(
                 Game(
                     title = title,
                     nintendoId = nintendoId,
-                    platform = idPlatformMap[nintendoId] ?: setOf("Switch")
+                    platform = idPlatformMap[nintendoId] ?: setOf("Switch"),
+                    playTime = playtimeById[nintendoId] ?: 0
                 )
             )
         }
@@ -180,13 +200,41 @@ class NintendoDataSource(
     }
 
     /**
+     * Fetches the play histories with the given session token. Only a stale
+     * token is fatal (re-login prompt); other playtime failures are logged
+     * and skipped so the library import still proceeds.
+     */
+    private suspend fun fetchPlaytimes(sessionToken: String): List<NintendoSource.NintendoPlaytime> {
+        if (sessionToken == "") {
+            Log.w(
+                "NintendoDataSource",
+                "No Nintendo play activity session token saved; importing without playtime"
+            )
+            return listOf()
+        }
+        return try {
+            NintendoSource.getPlayHistories(sessionToken)
+        } catch (_: NintendoSessionExpiredException) {
+            throw AccountExpiryException(
+                "Cannot access Nintendo play activity with the saved login! Must log in again to Nintendo!",
+                libraryName
+            )
+        } catch (e: APIException) {
+            Log.e("NintendoDataSource", "Failed to fetch the Nintendo play histories; importing without playtime!", e)
+            listOf()
+        }
+    }
+
+    /**
      * Matches the given title map (sanitized title to (0, applicationId))
      * against IGDB's Switch games by name, applying the card's platform
-     * flags to the results and dropping games seen in a previous pass.
+     * flags and playtime to the results and dropping games seen in a
+     * previous pass.
      */
     private suspend fun matchNames(
         nameMap: Map<String, Pair<Long, String>>,
-        idPlatformMap: Map<String, Set<String>>
+        idPlatformMap: Map<String, Set<String>>,
+        playtimeById: Map<String, Long>
     ): List<Game> {
         val matchedGames = mutableListOf<Game>()
         val duplicateSet = mutableSetOf<Long>()
@@ -206,7 +254,10 @@ class NintendoDataSource(
                 // The card's platform flags are authoritative for the
                 // user's copy ("Switch", "Switch 2", or both)
                 matchedGames.add(
-                    game.copy(platform = idPlatformMap[game.nintendoId] ?: game.platform)
+                    game.copy(
+                        platform = idPlatformMap[game.nintendoId] ?: game.platform,
+                        playTime = playtimeById[game.nintendoId] ?: 0
+                    )
                 )
                 duplicateSet.add(game.igdbId)
             }

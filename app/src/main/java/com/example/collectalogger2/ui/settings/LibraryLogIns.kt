@@ -5,6 +5,7 @@ import com.example.collectalogger2.data.repository.SettingsRepository
 import com.example.collectalogger2.util.APIException
 import com.example.collectalogger2.util.libraryObjects.AmazonSource
 import com.example.collectalogger2.util.libraryObjects.EpicSource
+import com.example.collectalogger2.util.libraryObjects.NintendoSource
 import com.example.collectalogger2.util.libraryObjects.SteamSource
 import org.json.JSONObject
 
@@ -70,9 +71,13 @@ suspend fun getAmazonLogin(code: String, codeVerifier: String, settingsRepositor
     }
 }
 
-suspend fun getNintendoLogin(cookies: String, settingsRepository: SettingsRepository) {
+suspend fun getNintendoLogin(cookies: String, sessionTokenCode: String, codeVerifier: String, settingsRepository: SettingsRepository) {
     try {
-        // The cookies were captured straight from the login WebView
+        // Exchange the session token code from the login redirect for a
+        // session token (the cookies were captured straight from the WebView)
+        val sessionToken = if (sessionTokenCode == "") ""
+            else NintendoSource.getSessionToken(sessionTokenCode, codeVerifier)
+        settingsRepository.saveNintendoSessionToken(sessionToken)
         settingsRepository.saveNintendoCookies(cookies)
         Log.i("Nintendo login info saved!", cookies)
     } catch (ex: Exception) {

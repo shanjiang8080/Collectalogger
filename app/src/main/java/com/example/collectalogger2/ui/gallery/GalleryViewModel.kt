@@ -216,9 +216,9 @@ class GalleryViewModel(
         }
     }
 
-    fun saveNintendoLogin(cookies: String) {
+    fun saveNintendoLogin(cookies: String, sessionTokenCode: String, codeVerifier: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            settingsRepository.getNintendoLogin(cookies)
+            settingsRepository.getNintendoLogin(cookies, sessionTokenCode, codeVerifier)
         }
     }
 

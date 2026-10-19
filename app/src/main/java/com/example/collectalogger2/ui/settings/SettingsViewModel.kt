@@ -112,11 +112,12 @@ class SettingsViewModel(val settingsRepository: SettingsRepository) : ViewModel(
     }
 
     /**
-     * Saves the Nintendo portal cookies captured by the login overlay.
+     * Saves the Nintendo portal cookies and play activity session token
+     * (exchanged from the login redirect code) captured by the login overlay.
      */
-    fun saveNintendoLogin(cookies: String) {
+    fun saveNintendoLogin(cookies: String, sessionTokenCode: String, codeVerifier: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            getNintendoLogin(cookies, settingsRepository)
+            getNintendoLogin(cookies, sessionTokenCode, codeVerifier, settingsRepository)
         }
     }
 

@@ -166,7 +166,9 @@ fun GalleryScreen(
         saveSteamId = { viewModel.saveSteamId(it) },
         saveEpicId = { viewModel.saveEpicInfo(it) },
         saveAmazonLogin = { code, verifier -> viewModel.saveAmazonInfo(code, verifier) },
-        saveNintendoLogin = { viewModel.saveNintendoLogin(it) },
+        saveNintendoLogin = { cookies, code, verifier ->
+            viewModel.saveNintendoLogin(cookies, code, verifier)
+        },
         loadPercentage = loadPercentage,
         toggleSelection = { viewModel.toggleSelection(it) },
         clearSelection = { viewModel.clearSelection() }
@@ -192,7 +194,7 @@ fun GalleryScreenBody(
     saveSteamId: (String) -> Unit,
     saveEpicId: (String) -> Unit,
     saveAmazonLogin: (String, String) -> Unit,
-    saveNintendoLogin: (String) -> Unit,
+    saveNintendoLogin: (String, String, String) -> Unit,
     loadPercentage: Float,
     toggleSelection: (Long) -> Unit,
     clearSelection: () -> Unit = {}
@@ -1191,7 +1193,7 @@ private fun GalleryPreview() {
         saveSteamId = {},
         saveEpicId = {},
         saveAmazonLogin = { _, _ -> },
-        saveNintendoLogin = {},
+        saveNintendoLogin = { _, _, _ -> },
         loadPercentage = -1f,
         toggleSelection = {}
     )

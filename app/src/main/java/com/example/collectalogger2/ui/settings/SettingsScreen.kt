@@ -101,7 +101,9 @@ fun SettingsScreen(
         )
         "Nintendo" -> NintendoOverlay(
             onDismiss = onDismiss,
-            saveNintendoLogin = { cookies -> viewModel.saveNintendoLogin(cookies) }
+            saveNintendoLogin = { cookies, code, verifier ->
+                viewModel.saveNintendoLogin(cookies, code, verifier)
+            }
         )
         else -> {}
 

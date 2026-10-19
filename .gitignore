@@ -19,3 +19,4 @@ api_keys.properties
 /gradle/gradle-daemon-jvm.properties
 /.idea/markdown.xml
 /.idea/codeStyles/Project.xml
+/spikes

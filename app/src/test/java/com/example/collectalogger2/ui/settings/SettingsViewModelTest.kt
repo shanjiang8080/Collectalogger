@@ -132,12 +132,14 @@ class SettingsViewModelTest {
     @Test
     fun `saveNintendoLogin calls getNintendoLogin`() = runTest {
         mockkStatic("com.example.collectalogger2.ui.settings.LibraryLogInsKt")
-        coEvery { getNintendoLogin(any(), any()) } returns Unit
+        coEvery { getNintendoLogin(any(), any(), any(), any()) } returns Unit
 
         val testCookies = """{"https://accounts.nintendo.com": "cookie=1"}"""
-        viewModel.saveNintendoLogin(testCookies)
+        val testCode = "nintendo_code"
+        val testVerifier = "nintendo_verifier"
+        viewModel.saveNintendoLogin(testCookies, testCode, testVerifier)
 
-        coVerify { getNintendoLogin(testCookies, mockRepository) }
+        coVerify { getNintendoLogin(testCookies, testCode, testVerifier, mockRepository) }
         unmockkStatic("com.example.collectalogger2.ui.settings.LibraryLogInsKt")
     }
 }
