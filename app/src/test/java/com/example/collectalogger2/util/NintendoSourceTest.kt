@@ -352,6 +352,41 @@ class NintendoSourceTest {
         )
     }
 
+    // --- isPlayableGameEntry ---
+
+    @Test
+    fun isPlayableGameEntry_rejectsDemosAndApps() {
+        // Demos and test releases
+        assertFalse(NintendoSource.isPlayableGameEntry("DAVE THE DIVER Demo"))
+        assertFalse(NintendoSource.isPlayableGameEntry("Metroid Dread DEMO"))
+        assertFalse(NintendoSource.isPlayableGameEntry("Pikmin 4 Demo"))
+        assertFalse(NintendoSource.isPlayableGameEntry("ARMS Global Testpunch"))
+        assertFalse(NintendoSource.isPlayableGameEntry("Splatoon 2 Global Testfire"))
+        assertFalse(NintendoSource.isPlayableGameEntry("Kirby and the Forgotten Land (Demo Version)"))
+        assertFalse(NintendoSource.isPlayableGameEntry("Pepper Grinder [DEMO]"))
+        // Non-game apps
+        assertFalse(NintendoSource.isPlayableGameEntry("YouTube"))
+        assertFalse(NintendoSource.isPlayableGameEntry("Twitch"))
+        assertFalse(NintendoSource.isPlayableGameEntry("Pokémon HOME"))
+        assertFalse(NintendoSource.isPlayableGameEntry("Pokémon HOME".replace("é", "e")))
+        // Nintendo Classics launcher apps
+        assertFalse(NintendoSource.isPlayableGameEntry("Game Boy – Nintendo Classics"))
+        assertFalse(NintendoSource.isPlayableGameEntry(
+            "Super Nintendo Entertainment System – Nintendo Classics"
+        ))
+        assertFalse(NintendoSource.isPlayableGameEntry("Nintendo Switch Online"))
+    }
+
+    @Test
+    fun isPlayableGameEntry_acceptsRealGames() {
+        assertTrue(NintendoSource.isPlayableGameEntry("Pokémon LeafGreen Version"))
+        assertTrue(NintendoSource.isPlayableGameEntry("Balatro"))
+        assertTrue(NintendoSource.isPlayableGameEntry("We Love Katamari REROLL+ Royal Reverie"))
+        assertTrue(NintendoSource.isPlayableGameEntry("Demon Turbobox"))
+        // "Demo" as part of a word is not a demo
+        assertTrue(NintendoSource.isPlayableGameEntry("Democracy 3"))
+    }
+
     // --- cleanTitle ---
 
     @Test

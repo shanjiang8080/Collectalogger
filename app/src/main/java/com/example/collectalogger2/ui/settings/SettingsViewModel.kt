@@ -121,6 +121,16 @@ class SettingsViewModel(val settingsRepository: SettingsRepository) : ViewModel(
         }
     }
 
+    /**
+     * Saves whether played titles not in the owned library (physical games)
+     * should also be imported with their playtime.
+     */
+    fun setNintendoImportPhysical(enabled: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            settingsRepository.saveNintendoImportPhysical(enabled)
+        }
+    }
+
     fun setStoreFront(newValue: String) {
         _currentStoreFront.value = newValue
     }

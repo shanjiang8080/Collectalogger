@@ -28,20 +28,34 @@ import kotlinx.coroutines.flow.flow
  *   by the title/application id. Only owned titles get playtime; demo and
  *   non-game entries (YouTube, Twitch, ...) from the play history are
  *   skipped since they are not in the VGC list.
+ * - Optionally (with the physical import setting on), played titles that
+ *   are not in the owned library — physical cartridges — are also imported,
+ *   based on nonzero playtime, matched to IGDB with the same Switch platform
+ *   filter as owned titles (without it, exact names match IGDB entries on
+ *   other platforms too, creating duplicates).
+ *   Nintendo Classics titles are not importable either way: the play history
+ *   only tracks the Classics launcher apps, not the individual games.
  *
  * Coverage note: the portal lists virtual game cards, which digital purchases
  * issue automatically and physical cartridges get through Nintendo's VGC
- * flow, so the imported list follows that, not every owned cartridge.
+ * flow, so the owned list follows that — the physical import covers the rest
+ * through the play history.
  */
 class NintendoDataSource(
     var userInfoFlow: Flow<String>,
+    var userInfoSetter: suspend (String) -> Unit,
     var sessionTokenFlow: Flow<String>,
+    var sessionTokenSetter: suspend (String) -> Unit,
+    var physicalImportFlow: Flow<Boolean>,
     gameDao: GameDao
 ) : RemoteLibraryDataSource(gameDao) {
     override var libraryName: String = name
 
     companion object : HasLibraryName {
         override val name = "Nintendo"
+        // Restricts the IGDB name matching to Switch games
+        private const val SWITCH_PLATFORM_FILTER =
+            "platforms.name = (\"Nintendo Switch\", \"Nintendo Switch 2\")"
     }
 
     override suspend fun getGames(forceUpdate: Boolean): Flow<GameEvent> = flow {
@@ -85,6 +99,24 @@ class NintendoDataSource(
         // the same title/application ids the virtual game cards use
         val playtimeById = playtimes.associate { it.titleId to it.minutes }
 
+        // Optionally also import played titles that are not in the owned
+        // library (physical games), based on nonzero playtime. Owned cards
+        // always take precedence.
+        if (physicalImportFlow.first()) {
+            val ownedIds = idTitleMap.keys.toSet()
+            playtimes
+                .filter {
+                    it.titleId !in ownedIds && it.minutes > 0 &&
+                        NintendoSource.isPlayableGameEntry(it.name)
+                }
+                .forEach { entry ->
+                    if (idTitleMap.putIfAbsent(entry.titleId, NintendoSource.cleanTitle(entry.name)) == null) {
+                        idPlatformMap[entry.titleId] =
+                            setOf(if (entry.isSwitch2) "Switch 2" else "Switch")
+                    }
+                }
+        }
+
         // Emit an expected games count for the loading bar
         emit(ExpectedGamesCount(idTitleMap.size))
 
@@ -127,6 +159,9 @@ class NintendoDataSource(
 
         // Nintendo's games are not in IGDB's external_games database, so match
         // the remaining games by title, restricted to IGDB's Switch games.
+        // Owned and physical titles use the same filter: without it, exact
+        // names also match IGDB entries on other platforms, creating
+        // duplicates (e.g. multiple Captain Toad or Metroid Dread entries).
         val fallbackMap = mutableMapOf<String, Pair<Long, String>>()
         idTitleMap.forEach { (nintendoId, title) ->
             fallbackMap[sanitizeTitle(title)] = 0L to nintendoId
@@ -245,7 +280,7 @@ class NintendoDataSource(
             gamePrefix = "",
             customField = "name",
             customFieldIsGameAttribute = false,
-            otherGameFilter = "platforms.name = (\"Nintendo Switch\", \"Nintendo Switch 2\")",
+            otherGameFilter = SWITCH_PLATFORM_FILTER,
             includeUpdates = true,
             platform = "Switch",
             gameJSONPath = { json -> return@callIGDB json }

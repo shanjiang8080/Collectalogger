@@ -153,6 +153,10 @@
     <string name="settings_itch_button_cd">Itch button</string>
     <string name="settings_amazon_button_cd">Amazon button</string>
     <string name="settings_nintendo_button_cd">Nintendo button</string>
+    <string name="settings_nintendo_dialog_title">Nintendo Switch</string>
+    <string name="settings_nintendo_dialog_text">Should all played titles, including physical games and Game Trials, be imported?</string>
+    <string name="settings_nintendo_dialog_yes">Yes, import all played titles</string>
+    <string name="settings_nintendo_dialog_no">No, owned digital games only</string>
 
     <!-- Login overlays -->
     <string name="overlay_steam_instructions">Enter the URL to your Steam Profile. Note that URLs with numerical IDs and usernames are both accepted.</string>

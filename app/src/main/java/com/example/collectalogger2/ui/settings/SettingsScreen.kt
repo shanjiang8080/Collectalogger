@@ -11,6 +11,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -23,6 +25,8 @@ import com.example.collectalogger2.ui.overlays.GogOverlay
 import com.example.collectalogger2.ui.overlays.ItchOverlay
 import com.example.collectalogger2.ui.overlays.NintendoOverlay
 import com.example.collectalogger2.ui.overlays.SteamOverlay
+import com.example.collectalogger2.ui.shared.LibraryDialogOption
+import com.example.collectalogger2.ui.shared.LibraryOptionDialog
 
 // UPDATE WHEN ADDING LIBRARIES
 @Composable
@@ -78,6 +82,8 @@ fun SettingsScreen(
         }
     }
     val onDismiss = { viewModel.setStoreFront("") }
+    // Reset the pre-login option dialog whenever another store front is selected
+    val optionDialogAnswered = remember(activeStoreFront) { mutableStateOf(false) }
     when (activeStoreFront) {
         "Steam" -> SteamOverlay(
             onDismiss = onDismiss,
@@ -99,12 +105,38 @@ fun SettingsScreen(
             onDismiss = onDismiss,
             saveAmazonLogin = { code, verifier -> viewModel.saveAmazonInfo(code, verifier) }
         )
-        "Nintendo" -> NintendoOverlay(
-            onDismiss = onDismiss,
-            saveNintendoLogin = { cookies, code, verifier ->
-                viewModel.saveNintendoLogin(cookies, code, verifier)
+        "Nintendo" -> {
+            // Ask about import options (physical games with playtime)
+            // before opening the login overlay; reusable for other libraries
+            if (optionDialogAnswered.value) {
+                NintendoOverlay(
+                    onDismiss = onDismiss,
+                    saveNintendoLogin = { cookies, code, verifier ->
+                        viewModel.saveNintendoLogin(cookies, code, verifier)
+                    }
+                )
+            } else {
+                LibraryOptionDialog(
+                    title = stringResource(R.string.settings_nintendo_dialog_title),
+                    text = stringResource(R.string.settings_nintendo_dialog_text),
+                    options = listOf(
+                        LibraryDialogOption(
+                            stringResource(R.string.settings_nintendo_dialog_yes)
+                        ) {
+                            viewModel.setNintendoImportPhysical(true)
+                            optionDialogAnswered.value = true
+                        },
+                        LibraryDialogOption(
+                            stringResource(R.string.settings_nintendo_dialog_no)
+                        ) {
+                            viewModel.setNintendoImportPhysical(false)
+                            optionDialogAnswered.value = true
+                        }
+                    ),
+                    onDismissRequest = onDismiss
+                )
             }
-        )
+        }
         else -> {}
 
     }

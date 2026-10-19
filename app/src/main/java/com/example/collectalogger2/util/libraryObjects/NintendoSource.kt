@@ -390,6 +390,30 @@ object NintendoSource {
         return histories
     }
 
+    // Demos and test releases from the play history are never real owned games
+    private val demoEntryRegex = Regex("""\b(demo|testpunch|testfire)\b""", RegexOption.IGNORE_CASE)
+    // Non-game apps that show up in the play history
+    private val nonGameEntries = setOf(
+        "youtube", "twitch", "hulu", "niconico",
+        "pokemon home", "pokémon home",
+        "nintendo switch online"
+    )
+    // The Nintendo Classics launcher apps end with this suffix
+    private const val classicsSuffix = "nintendo classics"
+
+    /**
+     * Whether a play history entry is a playable game (as opposed to demo
+     * releases, streaming apps, or the Nintendo Classics launcher apps).
+     * Used when importing played titles that are not in the owned library.
+     */
+    fun isPlayableGameEntry(name: String): Boolean {
+        if (demoEntryRegex.containsMatchIn(name)) return false
+        val cleaned = name.trim().lowercase()
+        if (cleaned in nonGameEntries) return false
+        if (cleaned.endsWith(classicsSuffix)) return false
+        return true
+    }
+
     /**
      * Pages through the virtual game card GraphQL API and returns the raw view
      * JSONObjects (all pages concatenated).

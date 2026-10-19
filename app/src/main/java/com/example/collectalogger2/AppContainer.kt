@@ -77,7 +77,10 @@ class AppDataContainer(private val context: Context) : AppContainer {
                 .plus(
                     NintendoDataSource(
                         userInfoFlow = settingsRepository.nintendoCookies,
+                        userInfoSetter = { str -> settingsRepository.saveNintendoCookies(str) },
                         sessionTokenFlow = settingsRepository.nintendoSessionToken,
+                        sessionTokenSetter = { str -> settingsRepository.saveNintendoSessionToken(str) },
+                        physicalImportFlow = settingsRepository.nintendoImportPhysical,
                         gameDao = gameDao
                     )
                 )
